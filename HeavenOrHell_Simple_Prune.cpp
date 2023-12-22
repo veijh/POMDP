@@ -125,7 +125,7 @@ int main() {
     gamma.setConstant(0);
 
     // 计算Vh
-    for (int horizon = 0; horizon < 8; horizon++) {
+    for (int horizon = 0; horizon < 10; horizon++) {
         cout << horizon << endl;
         Eigen::MatrixXd new_gamma;
         vector<vector<vector<vector<double>>>> tmp;
@@ -178,7 +178,7 @@ int main() {
         }
 
         // 随机采样对非积极约束剪枝
-        const int sample_num = 1000;
+        const int sample_num = 20000;
         int active_num = 0;
         Eigen::MatrixXd sample_point(1+total_state, sample_num);
         sample_point.setConstant(0);
