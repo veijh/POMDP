@@ -118,30 +118,19 @@ int main() {
         }
     }
 
-    // PBVI的核心
-    const int point_num = 3*total_state/2;
-    Eigen::MatrixXd possible_state(2,3);
-    possible_state << 1, 0, 0.5,
-            0, 1, 0.5;
-    int active_num = 0;
-    // 信念点的集合 N+1 x point_num
-    Eigen::MatrixXd belief_point(1+total_state, point_num);
-    belief_point.setConstant(0);
-    for(int i = 0; i < total_state/2; i++){
-        belief_point.block(1+2*i,3*i,2,3) = possible_state;
-    }
-    // 每一个信念点对应一个alpha_vector(行向量) point_num x N+1
+//    cout << trans_vec[UP];
+    Eigen::MatrixXd gamma;
     // 第一列是动作
-    Eigen::MatrixXd alpha_vector(point_num, 1+total_state);
-    alpha_vector.setConstant(0);
+    gamma.conservativeResize(1, 1 + total_state);
+    gamma.setConstant(0);
 
     // 计算Vh
     for (int horizon = 0; horizon < 10; horizon++) {
-        cout << "iteration: " << horizon << endl;
-        Eigen::MatrixXd new_alpha;
+        cout << horizon << endl;
+        Eigen::MatrixXd new_gamma;
         vector<vector<vector<vector<double>>>> tmp;
-        tmp.resize(point_num);
-        for (int row = 0; row < point_num; row++) {
+        tmp.resize(gamma.rows());
+        for (int row = 0; row < gamma.rows(); row++) {
             tmp[row].resize(4);
             for (int action = 0; action < 4; action++) {
                 tmp[row][action].resize(2);
@@ -149,16 +138,15 @@ int main() {
         }
 
         // 这一段可以并行计算
-        // tmp一共有point_num * action * observation * state个元素
-        // belief数量
-        for (int row = 0; row < point_num; row++) {
+        // 约束数量
+        for (int row = 0; row < gamma.rows(); row++) {
             // 动作
             for (int action = 0; action < 4; action++) {
                 // 观测
                 for (int z = 0; z < 2; ++z) {
-                    // 状态,这个for循环可以直接写成矩阵乘法，最里面可以用Eigen::Vector而不是vector<double>
+                    // 状态
                     for (int s = 0; s < total_state; s++) {
-                        double v = (alpha_vector.row(row).rightCols(total_state).array() * p_obs_state.row(z).array()).matrix()
+                        double v = (gamma.row(row).rightCols(total_state).array() * p_obs_state.row(z).array()).matrix()
                                    * trans_vec[action].transpose().col(s);
                         tmp[row][action][z].push_back(v);
                     }
@@ -166,55 +154,66 @@ int main() {
             }
         }
 
-        // Vbar(b)是可以求解的，因此每个belief点对应action个可能的alpha_vector
-        new_alpha.conservativeResize(4 * point_num, 1 + total_state);
-        new_alpha.setConstant(0);
-
-        // belief点
-        for(int col = 0; col < point_num; col++){
-            // 对于某个指定动作
-            for (int action = 0; action < 4; action++) {
-                // 对于某个指定观测
-                for(int z = 0; z < 2; z++){
-                    // 计算V(b|z)
-                    // 查找使得alpha*b最大的alpha
-                    vector<double> prod_vec;
-                    for(int new_col = 0; new_col < point_num; new_col++) {
-                        double prod = 0;
-                        for(int s = 0; s < total_state; s++){
-                            prod += tmp[new_col][action][z][s] * belief_point(1+s, col);
-                        }
-                        prod_vec.push_back(prod);
+        new_gamma.conservativeResize(4 * gamma.rows() * gamma.rows(), 1 + total_state);
+        // 动作
+        for (int action = 0; action < 4; action++) {
+            // 排列组合
+            for (int per_1 = 0; per_1 < gamma.rows(); per_1++) {
+                for (int per_2 = 0; per_2 < gamma.rows(); per_2++) {
+                    new_gamma(per_2 + gamma.rows() * per_1 + gamma.rows() * gamma.rows() * action, 0) = action;
+                    // 状态
+                    for (int s = 0; s < total_state; ++s) {
+                        double reward = -1;
+                        if (s == 4 && action == UP) reward = 100;
+                        if (s == 5 && action == UP) reward = -100;
+                        if (s == 8 && action == UP) reward = -100;
+                        if (s == 9 && action == UP) reward = 100;
+                        if (s == 0 || s == 1 || s == 2 || s == 3) reward = 0;
+                        double sum = tmp[per_1][action][0][s]
+                                     + tmp[per_2][action][1][s];
+                        new_gamma(per_2 + gamma.rows() * per_1 + gamma.rows() * gamma.rows() * action, s + 1) = reward + sum;
                     }
-                    int index = max_element(prod_vec.begin(), prod_vec.end()) - prod_vec.begin();
-
-                    // 求和得到Vbar
-                    for(int s = 0; s < total_state; s++){
-                        new_alpha(action + 4*col, 1+s) += tmp[index][action][z][s];
-                    }
-                }
-                new_alpha(action + 4*col, 0) = action;
-
-                // 状态
-                for (int s = 0; s < total_state; ++s) {
-                    double reward = -1;
-                    if (s == 4 && action == UP) reward = 100;
-                    if (s == 5 && action == UP) reward = -100;
-                    if (s == 8 && action == UP) reward = -100;
-                    if (s == 9 && action == UP) reward = 100;
-                    if (s == 0 || s == 1 || s == 2 || s == 3) reward = 0;
-                    new_alpha(action + 4*col, 1+s) += reward;
                 }
             }
-
-            int best_action = 0;
-            auto result = new_alpha.block(4*col, 0, 4, 1+total_state) * belief_point.col(col);
-            result.maxCoeff(&best_action);
-            // 从action中选择最优动作，更新alpha_vector
-            alpha_vector.row(col) = new_alpha.row(best_action + 4*col);
         }
+
+        // 和PBVI有所差异，原文有两次argmax
+        // 可达的信念点采样对非积极约束剪枝
+        const int sample_num = 3*total_state/2;
+        Eigen::MatrixXd possible_state(2,3);
+        possible_state << 1, 0, 0.5,
+                        0, 1, 0.5;
+        int active_num = 0;
+        Eigen::MatrixXd sample_point(1+total_state, sample_num);
+        sample_point.setConstant(0);
+        for(int i = 0; i < total_state/2; i++){
+            sample_point.block(1+2*i,3*i,2,3) = possible_state;
+        }
+
+        Eigen::MatrixXd ans = new_gamma * sample_point;
+        Eigen::MatrixXd gamma_prune;
+        vector<int> active_con_index(new_gamma.rows(),0);
+        for(int col = 0; col < sample_num; col ++){
+            int index = 0;
+            ans.col(col).maxCoeff(&index);
+            if(active_con_index[index] == 0){
+                active_con_index[index] = 1;
+                active_num++;
+            }
+        }
+
+        gamma_prune.conservativeResize(active_num, 1+total_state);
+        int gamma_prune_index = 0;
+        for(int i = 0; i < active_con_index.size(); i++){
+            if(active_con_index[i]){
+                gamma_prune.row(gamma_prune_index) = new_gamma.row(i);
+                gamma_prune_index++;
+            }
+        }
+
+        gamma = gamma_prune;
     }
-    cout << alpha_vector << endl;
+    cout << gamma << endl;
 
     vector<set<int>> policy;
     for(int s = 0; s < total_state/2; s++){
@@ -223,13 +222,13 @@ int main() {
         belief(2*s + 1) = 0.5;
         belief(2*s+1 + 1) = 0.5;
         Eigen::Index index;
-        auto result = alpha_vector*belief;
+        auto result = gamma*belief;
         double max_v = result.maxCoeff();
         set<int> tmp;
-        for(int i = 0; i < alpha_vector.rows(); i++){
+        for(int i = 0; i < gamma.rows(); i++){
             if(max_v == result(i)){
-                if (tmp.find(alpha_vector(i,0)) == tmp.end()) {
-                    tmp.insert(alpha_vector(i,0));
+                if (tmp.find(gamma(i,0)) == tmp.end()) {
+                    tmp.insert(gamma(i,0));
                 }
             }
         }
