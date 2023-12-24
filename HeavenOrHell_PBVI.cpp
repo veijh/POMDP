@@ -64,7 +64,6 @@ int main() {
     trans_vec.push_back(transition);
     trans_vec.push_back(transition);
     trans_vec.push_back(transition);
-
     for (int i = 0; i < total_state; i++) {
         switch (i / 2) {
             case 0:
@@ -139,7 +138,7 @@ int main() {
     for (int horizon = 0; horizon < 10; horizon++) {
         cout << "iteration: " << horizon << endl;
         Eigen::MatrixXd new_alpha;
-        vector<vector<vector<vector<double>>>> tmp;
+        vector<vector<vector<Eigen::Matrix<double, 1, 1+total_state>>>> tmp;
         tmp.resize(point_num);
         for (int row = 0; row < point_num; row++) {
             tmp[row].resize(4);
@@ -149,19 +148,17 @@ int main() {
         }
 
         // 这一段可以并行计算
-        // tmp一共有point_num * action * observation * state个元素
+        // tmp一共有point_num * action * observation 个元素
         // belief数量
-        for (int row = 0; row < point_num; row++) {
+        for (int k = 0; k < point_num; k++) {
             // 动作
             for (int action = 0; action < 4; action++) {
                 // 观测
                 for (int z = 0; z < 2; ++z) {
-                    // 状态,这个for循环可以直接写成矩阵乘法，最里面可以用Eigen::Vector而不是vector<double>
-                    for (int s = 0; s < total_state; s++) {
-                        double v = (alpha_vector.row(row).rightCols(total_state).array() * p_obs_state.row(z).array()).matrix()
-                                   * trans_vec[action].transpose().col(s);
-                        tmp[row][action][z].push_back(v);
-                    }
+                    // 第一列为 action
+                    tmp[k][action][z](0,0) = 0;
+                    tmp[k][action][z].rightCols(total_state) = (alpha_vector.row(k).rightCols(total_state).array() * p_obs_state.row(z).array()).matrix()
+                                        * trans_vec[action].transpose();
                 }
             }
         }
@@ -171,7 +168,7 @@ int main() {
         new_alpha.setConstant(0);
 
         // belief点
-        for(int col = 0; col < point_num; col++){
+        for(int k = 0; k < point_num; k++){
             // 对于某个指定动作
             for (int action = 0; action < 4; action++) {
                 // 对于某个指定观测
@@ -179,21 +176,16 @@ int main() {
                     // 计算V(b|z)
                     // 查找使得alpha*b最大的alpha
                     vector<double> prod_vec;
-                    for(int new_col = 0; new_col < point_num; new_col++) {
-                        double prod = 0;
-                        for(int s = 0; s < total_state; s++){
-                            prod += tmp[new_col][action][z][s] * belief_point(1+s, col);
-                        }
+                    for(int new_k = 0; new_k < point_num; new_k++){
+                        double prod = tmp[new_k][action][z] * belief_point.col(k);
                         prod_vec.push_back(prod);
                     }
                     int index = max_element(prod_vec.begin(), prod_vec.end()) - prod_vec.begin();
 
                     // 求和得到Vbar
-                    for(int s = 0; s < total_state; s++){
-                        new_alpha(action + 4*col, 1+s) += tmp[index][action][z][s];
-                    }
+                    new_alpha.row(action + 4 * k) += tmp[index][action][z];
                 }
-                new_alpha(action + 4*col, 0) = action;
+                new_alpha(action + 4 * k, 0) = action;
 
                 // 状态
                 for (int s = 0; s < total_state; ++s) {
@@ -203,15 +195,15 @@ int main() {
                     if (s == 8 && action == UP) reward = -100;
                     if (s == 9 && action == UP) reward = 100;
                     if (s == 0 || s == 1 || s == 2 || s == 3) reward = 0;
-                    new_alpha(action + 4*col, 1+s) += reward;
+                    new_alpha(action + 4*k, 1+s) += reward;
                 }
             }
 
-            int best_action = 0;
-            auto result = new_alpha.block(4*col, 0, 4, 1+total_state) * belief_point.col(col);
-            result.maxCoeff(&best_action);
             // 从action中选择最优动作，更新alpha_vector
-            alpha_vector.row(col) = new_alpha.row(best_action + 4*col);
+            int best_action = 0;
+            auto result = new_alpha.block(4*k, 0, 4, 1+total_state) * belief_point.col(k);
+            result.maxCoeff(&best_action);
+            alpha_vector.row(k) = new_alpha.row(best_action + 4*k);
         }
     }
     cout << alpha_vector << endl;
