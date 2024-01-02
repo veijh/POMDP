@@ -31,9 +31,9 @@ void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
         vector<vector<vector<Eigen::RowVectorXd>>> tmp;
         tmp.resize(points_num);
         for (int row = 0; row < points_num; ++row) {
-            tmp[row].resize(4);
+            tmp[row].resize(act_dim);
             for (int action = 0; action < act_dim; ++action) {
-                tmp[row][action].resize(2);
+                tmp[row][action].resize(obs_dim);
                 for (int z = 0; z < obs_dim; ++z) {
                     tmp[row][action][z].conservativeResize(1 + state_dim);
                 }
@@ -57,15 +57,15 @@ void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
         }
 
         // Vbar(b)是可以求解的，因此每个belief点对应action个可能的alpha_vector
-        new_alpha.conservativeResize(4 * points_num, 1 + state_dim);
+        new_alpha.conservativeResize(act_dim * points_num, 1 + state_dim);
         new_alpha.setConstant(0);
 
         // belief点
         for(int k = 0; k < points_num; k++){
             // 对于某个指定动作
-            for (int action = 0; action < 4; action++) {
+            for (int action = 0; action < act_dim; action++) {
                 // 对于某个指定观测
-                for(int z = 0; z < 2; z++){
+                for(int z = 0; z < obs_dim; z++){
                     // 计算V(b|z)
                     // 查找使得alpha*b最大的alpha
                     vector<double> prod_vec;

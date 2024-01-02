@@ -50,12 +50,15 @@ int main() {
     const int total_state = 16;
 
     // 观测的似然
-    Eigen::Matrix2Xd p_obs_state(2, total_state);
-    p_obs_state.setConstant(0.5);
+    Eigen::MatrixXd p_obs_state(3, total_state);
+    p_obs_state.setConstant(0);
+    p_obs_state.row(2).setConstant(1);
     p_obs_state(0, 14) = 1;
     p_obs_state(1, 14) = 0;
+    p_obs_state(2, 14) = 0;
     p_obs_state(0, 15) = 0;
     p_obs_state(1, 15) = 1;
+    p_obs_state(2, 15) = 0;
 
     // 状态转移
     vector<Eigen::MatrixXd> trans_vec;
