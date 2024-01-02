@@ -17,6 +17,8 @@
 #include "set"
 #include "cstdlib"
 
+#define EPS (1e-8)
+
 using namespace std;
 
 class POMDP{
@@ -40,7 +42,7 @@ private:
 public:
     POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r_s_a, const Eigen::MatrixXd &p_o_s);
     void PBVI(Eigen::MatrixXd _belief_points, int horizon_len);
-    int select_action(Eigen::VectorXd _belief_state);
+    vector<int> select_action(Eigen::VectorXd _belief_state);
 };
 
 #endif //CPP_TEST_POMDP_H

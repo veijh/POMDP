@@ -94,16 +94,17 @@ void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
     cout << "alpha_vector:" << endl << alpha_vector << endl;
 }
 
-int POMDP::select_action(Eigen::VectorXd _belief_state)
+vector<int> POMDP::select_action(Eigen::VectorXd _belief_state)
 {
     auto result = alpha_vector*_belief_state;
     double max_v = result.maxCoeff();
-    vector<int> best_action;
+    vector<int> best_actions;
     for(int i = 0; i < alpha_vector.rows(); i++){
-        if(max_v == result(i)){
-            if (find(best_action.begin(), best_action.end(),alpha_vector(i,0)) == best_action.end()) {
-                best_action.push_back((int)alpha_vector(i,0));
+        if(abs(max_v - result(i)) < EPS) {
+            if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
+                best_actions.push_back((int)alpha_vector(i,0));
             }
         }
     }
+    return best_actions;
 }

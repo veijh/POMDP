@@ -152,25 +152,15 @@ int main() {
     POMDP PBVI(trans_vec, reward, p_obs_state);
     PBVI.PBVI(belief_point, 10);
 
-    /*
-    vector<set<int>> policy;
+
+    vector<vector<int>> policy;
     for(int s = 0; s < total_state/2; s++){
         Eigen::VectorXd belief(1+total_state);
         belief.setConstant(0);
         belief(2*s + 1) = 0.5;
         belief(2*s+1 + 1) = 0.5;
-        Eigen::Index index;
-        auto result = alpha_vector*belief;
-        double max_v = result.maxCoeff();
-        set<int> tmp;
-        for(int i = 0; i < alpha_vector.rows(); i++){
-            if(max_v == result(i)){
-                if (tmp.find(alpha_vector(i,0)) == tmp.end()) {
-                    tmp.insert(alpha_vector(i,0));
-                }
-            }
-        }
-        policy.push_back(tmp);
+        vector<int> best_actions = PBVI.select_action(belief);
+        policy.push_back(best_actions);
     }
 
     int index = 0;
@@ -214,6 +204,6 @@ int main() {
         }
         index++;
     }
-    */
+
 
 }
