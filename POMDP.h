@@ -40,9 +40,14 @@ private:
     // each point corresponds with an alpha vector: Nx(1+S)
     Eigen::MatrixXd alpha_vector;
 public:
+    // init POMDP
     POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r_s_a, const Eigen::MatrixXd &p_o_s);
+    // use PBVI to solve POMDP, _belief_points: SxN
     void PBVI(Eigen::MatrixXd _belief_points, int horizon_len);
+    // select best actions according to belief state, _belief_points: SxN
     vector<int> select_action(Eigen::VectorXd _belief_state);
+    // use bayesian inference to update the belief state, belief: Sx1
+    Eigen::VectorXd bayesian_filter(Eigen::VectorXd _belief_state, int _obs);
 };
 
 #endif //CPP_TEST_POMDP_H

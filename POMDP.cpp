@@ -16,7 +16,8 @@ POMDP::POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r
 }
 
 void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
-    belief_points = _belief_points;
+    belief_points.conservativeResize(1 + state_dim, _belief_points.cols());
+    belief_points.block(1, 0, state_dim, _belief_points.cols()) = _belief_points;
     int points_num = belief_points.cols();
 
     alpha_vector.conservativeResize(points_num, 1 + state_dim);
@@ -94,9 +95,10 @@ void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
     cout << "alpha_vector:" << endl << alpha_vector << endl;
 }
 
-vector<int> POMDP::select_action(Eigen::VectorXd _belief_state)
-{
-    auto result = alpha_vector*_belief_state;
+vector<int> POMDP::select_action(Eigen::VectorXd _belief_state) {
+    Eigen::VectorXd adv_belief_state(1 + state_dim);
+    adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
+    auto result = alpha_vector * adv_belief_state;
     double max_v = result.maxCoeff();
     vector<int> best_actions;
     for(int i = 0; i < alpha_vector.rows(); i++){
@@ -107,4 +109,12 @@ vector<int> POMDP::select_action(Eigen::VectorXd _belief_state)
         }
     }
     return best_actions;
+}
+
+Eigen::VectorXd POMDP::bayesian_filter(Eigen::VectorXd _belief_state, int _obs) {
+    Eigen::VectorXd adv_belief_state(1 + state_dim);
+    adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
+    Eigen::VectorXd new_belief = (p_obs_in_s.row(_obs).transpose().array() * adv_belief_state.array()).matrix();
+    new_belief /= new_belief.sum();
+    return adv_belief_state.block(1, 0, state_dim, 1);
 }

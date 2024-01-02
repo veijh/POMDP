@@ -137,28 +137,23 @@ int main() {
     possible_state << 1, 0, 0.5,
             0, 1, 0.5;
     int active_num = 0;
-    // 信念点的集合 N+1 x point_num
-    Eigen::MatrixXd belief_point(1+total_state, point_num);
+    // 信念点的集合 N x point_num
+    Eigen::MatrixXd belief_point(total_state, point_num);
     belief_point.setConstant(0);
     for(int i = 0; i < total_state/2; i++){
-        belief_point.block(1+2*i,3*i,2,3) = possible_state;
+        belief_point.block(2*i,3*i,2,3) = possible_state;
     }
-    // 每一个信念点对应一个alpha_vector(行向量) point_num x N+1
-    // 第一列是动作
-    Eigen::MatrixXd alpha_vector(point_num, 1+total_state);
-    alpha_vector.setConstant(0);
 
     // 初始化与求解
     POMDP PBVI(trans_vec, reward, p_obs_state);
     PBVI.PBVI(belief_point, 10);
 
-
     vector<vector<int>> policy;
     for(int s = 0; s < total_state/2; s++){
-        Eigen::VectorXd belief(1+total_state);
+        Eigen::VectorXd belief(total_state);
         belief.setConstant(0);
-        belief(2*s + 1) = 0.5;
-        belief(2*s+1 + 1) = 0.5;
+        belief(2*s) = 0.5;
+        belief(2*s+1) = 0.5;
         vector<int> best_actions = PBVI.select_action(belief);
         policy.push_back(best_actions);
     }
@@ -204,6 +199,5 @@ int main() {
         }
         index++;
     }
-
 
 }
