@@ -1,291 +1,99 @@
 //
 // Created by wjh on 23-12-18.
 //
-#include "iostream"
-#include <iomanip>
-#include "vector"
-#include "unordered_map"
-#include "map"
-#include "Eigen/Eigen"
-#include "Eigen/Dense"
-#include "iostream"
-#include <iomanip>
-#include "vector"
-#include "unordered_map"
-#include "map"
-#include "Eigen/Eigen"
-#include "Eigen/Dense"
+#include "POMDP.h"
 
-#ifndef EIGEN_USE_MKL_ALL
-#define EIGEN_USE_MKL_ALL
-#endif
+POMDP::POMDP(vector<Eigen::MatrixXd> transition, Eigen::Matrix2Xd r_s_a, Eigen::Matrix2Xd p_o_s) {
+    act_dim = transition.size();
+    state_dim = r_s_a.rows();
+    obs_dim = p_o_s.rows();
+    cout << "state_dim space dim: " << state_dim << ", "
+         << "action space dim: " << act_dim << ", "
+         << "obs_dim space dim: " << obs_dim << endl;
+    trans_vec = transition;
+    rwd_s_a = r_s_a;
+    p_obs_in_s = p_o_s;
+}
 
-#ifndef EIGEN_VECTORIZE_SSE4_2
-#define EIGEN_VECTORIZE_SSE4_2
-#endif
+void POMDP::PBVI(Eigen::MatrixXd belief_points, int horizon_len) {
+    int points_num = belief_points.cols();
 
-#pragma GCC optimize(2)
+    alpha_vector.conservativeResize(points_num, 1 + state_dim);
+    alpha_vector.setConstant(0);
 
-using namespace std;
-
-enum ACTION {
-    UP = 0, DOWN, LEFT, RIGHT
-};
-
-class INDEX_MAP {
-private:
-    int row, col, world, obs;
-public:
-    INDEX_MAP(int _row, int _col, int _world, int _obs) : row(_row), col(_col), world(_world), obs(_obs) {};
-
-    int get_index(int i, int j, int _world) {
-        return _world + world * j + world * col * i;
-    }
-};
-
-int main() {
-    double instant_reward = -1;
-    INDEX_MAP state_index(5, 4, 2, 2);
-    Eigen::Matrix2Xd p_obs_state(2, 5 * 4 * 2);
-    p_obs_state.setConstant(0.5);
-    p_obs_state(0, state_index.get_index(0, 1, 0)) = 1;
-    p_obs_state(0, state_index.get_index(0, 1, 1)) = 0;
-    p_obs_state(1, state_index.get_index(0, 1, 0)) = 0;
-    p_obs_state(1, state_index.get_index(0, 1, 1)) = 1;
-
-    p_obs_state(0, state_index.get_index(2, 1, 0)) = 1;
-    p_obs_state(0, state_index.get_index(2, 1, 1)) = 0;
-    p_obs_state(1, state_index.get_index(2, 1, 0)) = 0;
-    p_obs_state(1, state_index.get_index(2, 1, 1)) = 1;
-
-    p_obs_state(0, state_index.get_index(0, 3, 0)) = 1;
-    p_obs_state(0, state_index.get_index(0, 3, 1)) = 0;
-    p_obs_state(1, state_index.get_index(0, 3, 0)) = 0;
-    p_obs_state(1, state_index.get_index(0, 3, 1)) = 1;
-
-    p_obs_state(0, state_index.get_index(2, 3, 0)) = 1;
-    p_obs_state(0, state_index.get_index(2, 3, 1)) = 0;
-    p_obs_state(1, state_index.get_index(2, 3, 0)) = 0;
-    p_obs_state(1, state_index.get_index(2, 3, 1)) = 1;
-
-//    cout << p_obs_state;
-
-    // 状态转移
-    vector<Eigen::Matrix<double, 40, 40>> trans_vec;
-    Eigen::Matrix<double, 40, 40> transition(40, 40);
-    transition.setConstant(0);
-    trans_vec.push_back(transition);
-    trans_vec.push_back(transition);
-    trans_vec.push_back(transition);
-    trans_vec.push_back(transition);
-    // 直接写吧，以后再封装
-    Eigen::Matrix<int, 7, 6> map(7, 6);
-    map.setConstant(0);
-    map(2, 2) = 1;
-    map(2, 3) = 1;
-    map(4, 2) = 1;
-    map(4, 3) = 1;
-    map(2, 4) = 2;
-    map(1, 3) = 3;
-    map(3, 3) = 4;
-    for (int i = 0; i < 7; i++) {
-        for (int j = 0; j < 6; j++) {
-            if (i == 0 || j == 0 || i == 6 || j == 5) {
-                map(i, j) = -1;
-            }
-        }
-    }
-    cout << map << endl;
-
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 4; j++) {
-            // 检测当前栅格状态
-            if (map(i + 1, j + 1) == 1 || map(i + 1, j + 1) == 2) {
-                trans_vec[UP](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                trans_vec[UP](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                trans_vec[DOWN](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                trans_vec[DOWN](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                trans_vec[LEFT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                trans_vec[LEFT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                trans_vec[RIGHT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                trans_vec[RIGHT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                continue;
-            }
-            // UP
-            switch (map(i + 1, j - 1 + 1)) {
-                case 0:
-                    trans_vec[UP](state_index.get_index(i, j, 0), state_index.get_index(i, j - 1, 0)) = 1;
-                    trans_vec[UP](state_index.get_index(i, j, 1), state_index.get_index(i, j - 1, 1)) = 1;
-                    break;
-                case 1:
-                    trans_vec[UP](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[UP](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case 2:
-                    trans_vec[UP](state_index.get_index(i, j, 0), state_index.get_index(i, j - 1, 0)) = 1;
-                    trans_vec[UP](state_index.get_index(i, j, 1), state_index.get_index(i, j - 1, 1)) = 1;
-                    break;
-                case 3:
-                    trans_vec[UP](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[UP](state_index.get_index(i, j, 1), state_index.get_index(i, j - 1, 1)) = 1;
-                    break;
-                case 4:
-                    trans_vec[UP](state_index.get_index(i, j, 0), state_index.get_index(i, j - 1, 0)) = 1;
-                    trans_vec[UP](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case -1:
-                    trans_vec[UP](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[UP](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-            }
-            // DOWN
-            switch (map(i + 1, j + 1 + 1)) {
-                case 0:
-                    trans_vec[DOWN](state_index.get_index(i, j, 0), state_index.get_index(i, j + 1, 0)) = 1;
-                    trans_vec[DOWN](state_index.get_index(i, j, 1), state_index.get_index(i, j + 1, 1)) = 1;
-                    break;
-                case 1:
-                    trans_vec[DOWN](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[DOWN](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case 2:
-                    trans_vec[DOWN](state_index.get_index(i, j, 0), state_index.get_index(i, j + 1, 0)) = 1;
-                    trans_vec[DOWN](state_index.get_index(i, j, 1), state_index.get_index(i, j + 1, 1)) = 1;
-                    break;
-                case 3:
-                    trans_vec[DOWN](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[DOWN](state_index.get_index(i, j, 1), state_index.get_index(i, j + 1, 1)) = 1;
-                    break;
-                case 4:
-                    trans_vec[DOWN](state_index.get_index(i, j, 0), state_index.get_index(i, j + 1, 0)) = 1;
-                    trans_vec[DOWN](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case -1:
-                    trans_vec[DOWN](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[DOWN](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-            }
-            // LEFT
-            switch (map(i - 1 + 1, j + 1)) {
-                case 0:
-                    trans_vec[LEFT](state_index.get_index(i, j, 0), state_index.get_index(i - 1, j, 0)) = 1;
-                    trans_vec[LEFT](state_index.get_index(i, j, 1), state_index.get_index(i - 1, j, 1)) = 1;
-                    break;
-                case 1:
-                    trans_vec[LEFT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[LEFT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case 2:
-                    trans_vec[LEFT](state_index.get_index(i, j, 0), state_index.get_index(i - 1, j, 0)) = 1;
-                    trans_vec[LEFT](state_index.get_index(i, j, 1), state_index.get_index(i - 1, j, 1)) = 1;
-                    break;
-                case 3:
-                    trans_vec[LEFT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[LEFT](state_index.get_index(i, j, 1), state_index.get_index(i - 1, j, 1)) = 1;
-                    break;
-                case 4:
-                    trans_vec[LEFT](state_index.get_index(i, j, 0), state_index.get_index(i - 1, j, 0)) = 1;
-                    trans_vec[LEFT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case -1:
-                    trans_vec[LEFT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[LEFT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-            }
-            // RIGHT
-            switch (map(i + 1 + 1, j + 1)) {
-                case 0:
-                    trans_vec[RIGHT](state_index.get_index(i, j, 0), state_index.get_index(i + 1, j, 0)) = 1;
-                    trans_vec[RIGHT](state_index.get_index(i, j, 1), state_index.get_index(i + 1, j, 1)) = 1;
-                    break;
-                case 1:
-                    trans_vec[RIGHT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[RIGHT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case 2:
-                    trans_vec[RIGHT](state_index.get_index(i, j, 0), state_index.get_index(i + 1, j, 0)) = 1;
-                    trans_vec[RIGHT](state_index.get_index(i, j, 1), state_index.get_index(i + 1, j, 1)) = 1;
-                    break;
-                case 3:
-                    trans_vec[RIGHT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[RIGHT](state_index.get_index(i, j, 1), state_index.get_index(i + 1, j, 1)) = 1;
-                    break;
-                case 4:
-                    trans_vec[RIGHT](state_index.get_index(i, j, 0), state_index.get_index(i + 1, j, 0)) = 1;
-                    trans_vec[RIGHT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-                case -1:
-                    trans_vec[RIGHT](state_index.get_index(i, j, 0), state_index.get_index(i, j, 0)) = 1;
-                    trans_vec[RIGHT](state_index.get_index(i, j, 1), state_index.get_index(i, j, 1)) = 1;
-                    break;
-            }
-        }
-    }
-
-//    cout << trans_vec[UP];
-    Eigen::MatrixXd gamma;
-    // 第一列是动作
-    gamma.conservativeResize(1,41);
-    gamma.setConstant(0);
-
-    // 计算Vh
-    for (int horizon = 0; horizon < 3; horizon++) {
-        Eigen::MatrixXd new_gamma;
-        vector<vector<vector<vector<double>>>> tmp;
-        tmp.resize(gamma.rows());
-        for(int row = 0; row < gamma.rows(); row++){
+    // calculate the value function
+    for (int horizon = 0; horizon < horizon_len; horizon++) {
+        cout << "iteration: " << horizon << endl;
+        Eigen::MatrixXd new_alpha;
+        vector<vector<vector<Eigen::Matrix<double, 1, 1+state_dim>>>> tmp;
+        tmp.resize(points_num);
+        for (int row = 0; row < points_num; row++) {
             tmp[row].resize(4);
-            for(int action = 0; action < 4; action++){
+            for (int action = 0; action < 4; action++) {
                 tmp[row][action].resize(2);
             }
         }
 
-        // 约束数量
-        for (int row = 0; row < gamma.rows(); row++) {
+        // 这一段可以并行计算
+        // tmp一共有points_num * action * observation 个元素
+        // belief数量
+        for (int k = 0; k < points_num; k++) {
             // 动作
             for (int action = 0; action < 4; action++) {
                 // 观测
                 for (int z = 0; z < 2; ++z) {
-                    // 状态
-                    for (int i = 0; i < 5; i++) {
-                        for (int j = 0; j < 4; j++) {
-                            for (int k = 0; k < 2; k++) {
-                                double v = (gamma.row(row).rightCols(40).array() * p_obs_state.row(z).array()).matrix()
-                                * trans_vec[action].transpose().col(state_index.get_index(i, j, k));
-                                tmp[row][action][z].push_back(v);
-                            }
-                        }
-                    }
+                    // 第一列为 action
+                    tmp[k][action][z](0,0) = 0;
+                    tmp[k][action][z].rightCols(state_dim) = (alpha_vector.row(k).rightCols(state_dim).array() * p_obs_in_s.row(z).array()).matrix()
+                                                               * trans_vec[action].transpose();
                 }
             }
         }
 
-        // 动作
-        for(int action = 0; action < 4; action++){
-            // 排列组合
-            for(int per_1 = 0; per_1 < gamma.rows(); per_1 ++){
-                for(int per_2 = 0; per_2 < gamma.rows(); per_2 ++){
-                    new_gamma.conservativeResize(new_gamma.rows()+1, 41);
-                    new_gamma(new_gamma.rows()-1, 0) = action;
-                    // 状态
-                    for (int i = 0; i < 5; i++) {
-                        for (int j = 0; j < 4; j++) {
-                            for (int k = 0; k < 2; k++) {
-                                double reward = -1;
-                                if(i == 1 && j == 3) reward = 0;
-                                double sum = tmp[per_1][action][0][state_index.get_index(i,j,k)]
-                                        + tmp[per_2][action][1][state_index.get_index(i,j,k)];
-                                new_gamma(new_gamma.rows()-1, state_index.get_index(i,j,k)+1) = reward + sum;
-                            }
-                        }
+        // Vbar(b)是可以求解的，因此每个belief点对应action个可能的alpha_vector
+        new_alpha.conservativeResize(4 * points_num, 1 + state_dim);
+        new_alpha.setConstant(0);
+
+        // belief点
+        for(int k = 0; k < points_num; k++){
+            // 对于某个指定动作
+            for (int action = 0; action < 4; action++) {
+                // 对于某个指定观测
+                for(int z = 0; z < 2; z++){
+                    // 计算V(b|z)
+                    // 查找使得alpha*b最大的alpha
+                    vector<double> prod_vec;
+                    for(int new_k = 0; new_k < points_num; new_k++){
+                        double prod = tmp[new_k][action][z] * belief_points.col(k);
+                        prod_vec.push_back(prod);
                     }
+                    int index = max_element(prod_vec.begin(), prod_vec.end()) - prod_vec.begin();
+
+                    // 求和得到Vbar
+                    new_alpha.row(action + 4 * k) += tmp[index][action][z];
+                }
+                new_alpha(action + 4 * k, 0) = action;
+
+                // reward可以写成R(s,a)矩阵
+                // 状态
+                for (int s = 0; s < total_state; ++s) {
+                    double reward = -1;
+                    if (s == 4 && action == UP) reward = 100;
+                    if (s == 5 && action == UP) reward = -100;
+                    if (s == 8 && action == UP) reward = -100;
+                    if (s == 9 && action == UP) reward = 100;
+                    if (s == 0 || s == 1 || s == 2 || s == 3) reward = 0;
+                    new_alpha(action + 4*k, 1+s) += reward;
                 }
             }
+
+            // 从action中选择最优动作，更新alpha_vector
+            int best_action = 0;
+            auto result = new_alpha.block(4*k, 0, 4, 1+state_dim) * belief_points.col(k);
+            result.maxCoeff(&best_action);
+            alpha_vector.row(k) = new_alpha.row(best_action + 4*k);
         }
-        gamma = new_gamma;
     }
-//    cout << gamma << endl;
-    vector<vector<list<int>>> policy;
+    cout << alpha_vector << endl;
 
-//    cout << "hello";
 }
