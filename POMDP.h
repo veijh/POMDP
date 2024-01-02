@@ -30,16 +30,16 @@ private:
     // state_dim transition probabilities taking specific action: AxSxS
     vector<Eigen::MatrixXd> trans_vec;
     // immediate rewards: SxA
-    Eigen::Matrix2Xd rwd_s_a;
+    Eigen::MatrixXd rwd_s_a;
     // observation probabilities: OxS
-    Eigen::Matrix2Xd p_obs_in_s;
+    Eigen::MatrixXd p_obs_in_s;
     // belief points: (1+S)xN
     Eigen::MatrixXd belief_points;
     // each point corresponds with an alpha vector: Nx(1+S)
     Eigen::MatrixXd alpha_vector;
 public:
-    POMDP(vector<Eigen::MatrixXd> transition, Eigen::Matrix2Xd r_s_a, Eigen::Matrix2Xd p_o_s);
-    void PBVI(Eigen::MatrixXd belief_points, int horizon_len);
+    POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r_s_a, const Eigen::MatrixXd &p_o_s);
+    void PBVI(Eigen::MatrixXd _belief_points, int horizon_len);
     int select_action(Eigen::VectorXd _belief_state);
 };
 

@@ -3,7 +3,7 @@
 //
 #include "POMDP.h"
 
-POMDP::POMDP(vector<Eigen::MatrixXd> transition, Eigen::Matrix2Xd r_s_a, Eigen::Matrix2Xd p_o_s) {
+POMDP::POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r_s_a, const Eigen::MatrixXd &p_o_s) {
     act_dim = transition.size();
     state_dim = r_s_a.rows();
     obs_dim = p_o_s.rows();
@@ -15,7 +15,8 @@ POMDP::POMDP(vector<Eigen::MatrixXd> transition, Eigen::Matrix2Xd r_s_a, Eigen::
     p_obs_in_s = p_o_s;
 }
 
-void POMDP::PBVI(Eigen::MatrixXd belief_points, int horizon_len) {
+void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
+    belief_points = _belief_points;
     int points_num = belief_points.cols();
 
     alpha_vector.conservativeResize(points_num, 1 + state_dim);
@@ -25,12 +26,16 @@ void POMDP::PBVI(Eigen::MatrixXd belief_points, int horizon_len) {
     for (int horizon = 0; horizon < horizon_len; horizon++) {
         cout << "iteration: " << horizon << endl;
         Eigen::MatrixXd new_alpha;
-        vector<vector<vector<Eigen::Matrix<double, 1, 1+state_dim>>>> tmp;
+        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXd>>".
+        vector<vector<vector<Eigen::RowVectorXd>>> tmp;
         tmp.resize(points_num);
-        for (int row = 0; row < points_num; row++) {
+        for (int row = 0; row < points_num; ++row) {
             tmp[row].resize(4);
-            for (int action = 0; action < 4; action++) {
+            for (int action = 0; action < act_dim; ++action) {
                 tmp[row][action].resize(2);
+                for (int z = 0; z < obs_dim; ++z) {
+                    tmp[row][action][z].conservativeResize(1 + state_dim);
+                }
             }
         }
 
@@ -39,9 +44,9 @@ void POMDP::PBVI(Eigen::MatrixXd belief_points, int horizon_len) {
         // belief数量
         for (int k = 0; k < points_num; k++) {
             // 动作
-            for (int action = 0; action < 4; action++) {
+            for (int action = 0; action < act_dim; action++) {
                 // 观测
-                for (int z = 0; z < 2; ++z) {
+                for (int z = 0; z < obs_dim; ++z) {
                     // 第一列为 action
                     tmp[k][action][z](0,0) = 0;
                     tmp[k][action][z].rightCols(state_dim) = (alpha_vector.row(k).rightCols(state_dim).array() * p_obs_in_s.row(z).array()).matrix()
@@ -70,30 +75,35 @@ void POMDP::PBVI(Eigen::MatrixXd belief_points, int horizon_len) {
                     int index = max_element(prod_vec.begin(), prod_vec.end()) - prod_vec.begin();
 
                     // 求和得到Vbar
-                    new_alpha.row(action + 4 * k) += tmp[index][action][z];
+                    new_alpha.row(action + act_dim * k) += tmp[index][action][z];
                 }
-                new_alpha(action + 4 * k, 0) = action;
+                new_alpha(action + act_dim * k, 0) = action;
 
                 // reward可以写成R(s,a)矩阵
                 // 状态
-                for (int s = 0; s < total_state; ++s) {
-                    double reward = -1;
-                    if (s == 4 && action == UP) reward = 100;
-                    if (s == 5 && action == UP) reward = -100;
-                    if (s == 8 && action == UP) reward = -100;
-                    if (s == 9 && action == UP) reward = 100;
-                    if (s == 0 || s == 1 || s == 2 || s == 3) reward = 0;
-                    new_alpha(action + 4*k, 1+s) += reward;
-                }
+                new_alpha.block(action + act_dim*k, 1, 1, state_dim) += rwd_s_a.col(action).transpose();
             }
 
             // 从action中选择最优动作，更新alpha_vector
             int best_action = 0;
-            auto result = new_alpha.block(4*k, 0, 4, 1+state_dim) * belief_points.col(k);
+            auto result = new_alpha.block(act_dim*k, 0, act_dim, 1+state_dim) * belief_points.col(k);
             result.maxCoeff(&best_action);
-            alpha_vector.row(k) = new_alpha.row(best_action + 4*k);
+            alpha_vector.row(k) = new_alpha.row(best_action + act_dim*k);
         }
     }
-    cout << alpha_vector << endl;
+    cout << "alpha_vector:" << endl << alpha_vector << endl;
+}
 
+int POMDP::select_action(Eigen::VectorXd _belief_state)
+{
+    auto result = alpha_vector*_belief_state;
+    double max_v = result.maxCoeff();
+    vector<int> best_action;
+    for(int i = 0; i < alpha_vector.rows(); i++){
+        if(max_v == result(i)){
+            if (find(best_action.begin(), best_action.end(),alpha_vector(i,0)) == best_action.end()) {
+                best_action.push_back((int)alpha_vector(i,0));
+            }
+        }
+    }
 }
