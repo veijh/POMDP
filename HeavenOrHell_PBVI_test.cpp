@@ -4,14 +4,10 @@
 #include "iostream"
 #include <iomanip>
 #include "vector"
-#include "algorithm"
-#include "unordered_map"
-#include "map"
 #include "omp.h"
 #include "Eigen/Eigen"
 #include "Eigen/Dense"
 #include "set"
-#include "cstdlib"
 #include "POMDP.h"
 
 #ifndef EIGEN_USE_MKL_ALL
