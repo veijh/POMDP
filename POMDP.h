@@ -17,7 +17,7 @@
 #include "set"
 #include "cstdlib"
 
-#define EPS (1e-8)
+#define EPS (1e-5)
 
 using namespace std;
 
@@ -30,24 +30,24 @@ private:
     // dimension of observation space: O
     int obs_dim;
     // state_dim transition probabilities taking specific action: AxSxS
-    vector<Eigen::MatrixXd> trans_vec;
+    vector<Eigen::MatrixXf> trans_vec;
     // immediate rewards: SxA
-    Eigen::MatrixXd rwd_s_a;
+    Eigen::MatrixXf rwd_s_a;
     // observation probabilities: OxS
-    Eigen::MatrixXd p_obs_in_s;
+    Eigen::MatrixXf p_obs_in_s;
     // belief points: (1+S)xN
-    Eigen::MatrixXd belief_points;
+    Eigen::MatrixXf belief_points;
     // each point corresponds with an alpha vector: Nx(1+S)
-    Eigen::MatrixXd alpha_vector;
+    Eigen::MatrixXf alpha_vector;
 public:
     // init POMDP
-    POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r_s_a, const Eigen::MatrixXd &p_o_s);
+    POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r_s_a, const Eigen::MatrixXf &p_o_s);
     // use PBVI to solve POMDP, _belief_points: SxN
-    void PBVI(Eigen::MatrixXd _belief_points, int horizon_len);
+    void PBVI(Eigen::MatrixXf _belief_points, int horizon_len);
     // select best actions according to belief state, _belief_points: SxN
-    vector<int> select_action(Eigen::VectorXd _belief_state);
+    vector<int> select_action(Eigen::VectorXf _belief_state);
     // use bayesian inference to update the belief state, belief: Sx1
-    Eigen::VectorXd bayesian_filter(Eigen::VectorXd _belief_state, int _obs);
+    Eigen::VectorXf bayesian_filter(Eigen::VectorXf _belief_state, int _obs);
 };
 
 #endif //CPP_TEST_POMDP_H

@@ -3,7 +3,7 @@
 //
 #include "POMDP.h"
 
-POMDP::POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r_s_a, const Eigen::MatrixXd &p_o_s) {
+POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r_s_a, const Eigen::MatrixXf &p_o_s) {
     act_dim = transition.size();
     state_dim = r_s_a.rows();
     obs_dim = p_o_s.rows();
@@ -15,7 +15,7 @@ POMDP::POMDP(const vector<Eigen::MatrixXd> &transition, const Eigen::MatrixXd &r
     p_obs_in_s = p_o_s;
 }
 
-void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
+void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
     belief_points.conservativeResize(1 + state_dim, _belief_points.cols());
     belief_points.block(1, 0, state_dim, _belief_points.cols()) = _belief_points;
     int points_num = belief_points.cols();
@@ -26,9 +26,9 @@ void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
     // calculate the value function
     for (int horizon = 0; horizon < horizon_len; horizon++) {
         cout << "iteration: " << horizon << endl;
-        Eigen::MatrixXd new_alpha;
-        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXd>>".
-        vector<vector<vector<Eigen::RowVectorXd>>> tmp;
+        Eigen::MatrixXf new_alpha;
+        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>".
+        vector<vector<vector<Eigen::RowVectorXf>>> tmp;
         tmp.resize(points_num);
         for (int row = 0; row < points_num; ++row) {
             tmp[row].resize(act_dim);
@@ -95,8 +95,8 @@ void POMDP::PBVI(Eigen::MatrixXd _belief_points, int horizon_len) {
     cout << "alpha_vector:" << endl << alpha_vector << endl;
 }
 
-vector<int> POMDP::select_action(Eigen::VectorXd _belief_state) {
-    Eigen::VectorXd adv_belief_state(1 + state_dim);
+vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
+    Eigen::VectorXf adv_belief_state(1 + state_dim);
     adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
     auto result = alpha_vector * adv_belief_state;
     double max_v = result.maxCoeff();
@@ -111,10 +111,10 @@ vector<int> POMDP::select_action(Eigen::VectorXd _belief_state) {
     return best_actions;
 }
 
-Eigen::VectorXd POMDP::bayesian_filter(Eigen::VectorXd _belief_state, int _obs) {
-    Eigen::VectorXd adv_belief_state(1 + state_dim);
+Eigen::VectorXf POMDP::bayesian_filter(Eigen::VectorXf _belief_state, int _obs) {
+    Eigen::VectorXf adv_belief_state(1 + state_dim);
     adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-    Eigen::VectorXd new_belief = (p_obs_in_s.row(_obs).transpose().array() * adv_belief_state.array()).matrix();
+    Eigen::VectorXf new_belief = (p_obs_in_s.row(_obs).transpose().array() * adv_belief_state.array()).matrix();
     new_belief /= new_belief.sum();
     return adv_belief_state.block(1, 0, state_dim, 1);
 }

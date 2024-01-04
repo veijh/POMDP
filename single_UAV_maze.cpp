@@ -146,14 +146,14 @@ int main() {
     cout << "act_dim: " << act_dim << endl;
 
     // init POMDP
-    vector<Eigen::MatrixXd> tran_vec;
-    Eigen::MatrixXd tran(state_dim, state_dim);
+    vector<Eigen::MatrixXf> tran_vec;
+    Eigen::MatrixXf tran(state_dim, state_dim);
     tran.setConstant(0);
     for(int i = 0; i < act_dim; i++){
         tran_vec.push_back(tran);
     }
-    Eigen::MatrixXd reward = Eigen::MatrixXd::Zero(state_dim, act_dim);
-    Eigen::MatrixXd p_o_s = Eigen::MatrixXd::Zero(obs_dim, state_dim);
+    Eigen::MatrixXf reward = Eigen::MatrixXf::Zero(state_dim, act_dim);
+    Eigen::MatrixXf p_o_s = Eigen::MatrixXf::Zero(obs_dim, state_dim);
     for(int s = 0; s < state_dim; s++){
         for(int act = 0; act < act_dim; act++){
             // every node has 512 states
