@@ -28,6 +28,8 @@ void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
         cout << "iteration: " << horizon << endl;
         Eigen::MatrixXf new_alpha;
         // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>".
+
+        cout << "initialize tmp" << endl;
         vector<vector<vector<Eigen::RowVectorXf>>> tmp;
         tmp.resize(points_num);
         for (int row = 0; row < points_num; ++row) {
@@ -40,9 +42,11 @@ void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
             }
         }
 
+        cout << "calculate tmp" << endl;
         // 这一段可以并行计算
         // tmp一共有points_num * action * observation 个元素
         // belief数量
+        #pragma omp parallel for num_threads(24)
         for (int k = 0; k < points_num; k++) {
             // 动作
             for (int action = 0; action < act_dim; action++) {
@@ -56,6 +60,7 @@ void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
             }
         }
 
+        cout << "update alpha" << endl;
         // Vbar(b)是可以求解的，因此每个belief点对应action个可能的alpha_vector
         new_alpha.conservativeResize(act_dim * points_num, 1 + state_dim);
         new_alpha.setConstant(0);
