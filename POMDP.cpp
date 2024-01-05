@@ -10,14 +10,46 @@ POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r
     cout << "state_dim space dim: " << state_dim << ", "
          << "action space dim: " << act_dim << ", "
          << "obs_dim space dim: " << obs_dim << endl;
-    trans_vec = transition;
+
+    struct timeval t1{},t2{};
+    double timeuse;
+    cout << "convert T(a,s,s) to sparse mat.";
+    gettimeofday(&t1,nullptr);
+    for(int i = 0; i < transition.size(); i++) {
+        trans_vec.push_back(transition[i].sparseView());
+    }
+    gettimeofday(&t2,nullptr);
+    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
+
+    cout << "copy r(s,a).";
+    gettimeofday(&t1,nullptr);
     rwd_s_a = r_s_a;
-    p_obs_in_s = p_o_s;
+    gettimeofday(&t2,nullptr);
+    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
+
+    cout << "convert p(o,s) to sparse mat.";
+    gettimeofday(&t1,nullptr);
+    p_obs_in_s = p_o_s.sparseView();
+    gettimeofday(&t2,nullptr);
+    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 }
 
 void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
-    belief_points.conservativeResize(1 + state_dim, _belief_points.cols());
-    belief_points.block(1, 0, state_dim, _belief_points.cols()) = _belief_points;
+    Eigen::MatrixXf augmented_belief = Eigen::MatrixXf::Zero(1 + state_dim, _belief_points.cols());
+    augmented_belief.bottomRows(state_dim) = _belief_points;
+
+    struct timeval t1{},t2{};
+    double timeuse;
+    cout << "convert belief_point to sparse mat.";
+    gettimeofday(&t1,nullptr);
+    belief_points = augmented_belief.sparseView();
+    gettimeofday(&t2,nullptr);
+    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
+
     int points_num = belief_points.cols();
 
     alpha_vector.conservativeResize(points_num, 1 + state_dim);
@@ -46,16 +78,26 @@ void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
         // 这一段可以并行计算
         // tmp一共有points_num * action * observation 个元素
         // belief数量
-//        #pragma omp parallel for
+        #pragma omp parallel for num_threads(24)
         for (int k = 0; k < points_num; k++) {
             // 动作
             for (int action = 0; action < act_dim; action++) {
                 // 观测
                 for (int z = 0; z < obs_dim; ++z) {
                     // 第一列为 action
+#ifdef DBG
+                    struct timeval t1{},t2{};
+                    double timeuse;
+                    gettimeofday(&t1,nullptr);
+#endif
                     tmp[k][action][z](0,0) = 0;
                     tmp[k][action][z].rightCols(state_dim) = alpha_vector.row(k).rightCols(state_dim).cwiseProduct(p_obs_in_s.row(z))
                                                                * trans_vec[action].transpose();
+#ifdef DBG
+                    gettimeofday(&t2,nullptr);
+                    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+                    cout<<"time = " << timeuse << endl;  //(in sec)
+#endif
                 }
             }
         }
@@ -65,6 +107,7 @@ void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
         new_alpha.conservativeResize(act_dim * points_num, 1 + state_dim);
         new_alpha.setConstant(0);
 
+        #pragma omp parallel for num_threads(24)
         // belief点
         for(int k = 0; k < points_num; k++){
             // 对于某个指定动作
@@ -119,7 +162,7 @@ vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
 Eigen::VectorXf POMDP::bayesian_filter(Eigen::VectorXf _belief_state, int _obs) {
     Eigen::VectorXf adv_belief_state(1 + state_dim);
     adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-    Eigen::VectorXf new_belief = (p_obs_in_s.row(_obs).transpose().array() * adv_belief_state.array()).matrix();
+    Eigen::VectorXf new_belief = p_obs_in_s.row(_obs).transpose().cwiseProduct(adv_belief_state);// (p_obs_in_s.row(_obs).transpose().array() * adv_belief_state.array()).matrix();
     new_belief /= new_belief.sum();
     return adv_belief_state.block(1, 0, state_dim, 1);
 }

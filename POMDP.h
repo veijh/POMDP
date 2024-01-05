@@ -17,6 +17,7 @@
 #include "Eigen/Sparse"
 #include "set"
 #include "cstdlib"
+#include <sys/time.h>
 
 #define EPS (1e-5)
 
@@ -33,13 +34,16 @@ private:
 
     /* using ptr instead of var can avoid unnecessary copy */
     // state_dim transition probabilities taking specific action: AxSxS
-    vector<Eigen::MatrixXf> trans_vec;
+//    vector<Eigen::MatrixXf> trans_vec;
+    vector<Eigen::SparseMatrix<float>> trans_vec;
     // immediate rewards: SxA
     Eigen::MatrixXf rwd_s_a;
     // observation probabilities: OxS
-    Eigen::MatrixXf p_obs_in_s;
+//    Eigen::MatrixXf p_obs_in_s;
+    Eigen::SparseMatrix<float> p_obs_in_s;
     // belief points: (1+S)xN
-    Eigen::MatrixXf belief_points;
+//    Eigen::MatrixXf belief_points;
+    Eigen::SparseMatrix<float> belief_points;
     // each point corresponds with an alpha vector: Nx(1+S)
     Eigen::MatrixXf alpha_vector;
 public:
