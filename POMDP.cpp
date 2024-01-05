@@ -54,7 +54,7 @@ void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
                 for (int z = 0; z < obs_dim; ++z) {
                     // 第一列为 action
                     tmp[k][action][z](0,0) = 0;
-                    tmp[k][action][z].rightCols(state_dim) = (alpha_vector.row(k).rightCols(state_dim).array() * p_obs_in_s.row(z).array()).matrix()
+                    tmp[k][action][z].rightCols(state_dim) = alpha_vector.row(k).rightCols(state_dim).cwiseProduct(p_obs_in_s.row(z))
                                                                * trans_vec[action].transpose();
                 }
             }
