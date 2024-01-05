@@ -38,7 +38,7 @@ int main() {
 #else
     cout << " not support openmp" << endl;
 #endif
-//    omp_set_num_threads(24);
+    omp_set_num_threads(6);
     int obs_dim = 3, state_dim = 84*512;
     int act_dim = 0;
 
@@ -162,6 +162,13 @@ int main() {
     for(int s = 0; s < state_dim; s++){
         for(int act = 0; act < act_dim; act++){
             // every node has 512 states
+            // dst node is an absorbed state
+            if(s/512 == 3 || s/512 == 4 || s/512 == 5){
+                tran_vec[act](s, s) = 1;
+                reward(s, act) = 0;
+                continue;
+            }
+            // normal node
             if(act < adj_table[s/512].edge_list.size()){
                 auto header = adj_table[s/512].edge_list.begin();
                 for(int mv = 0; mv < act; mv++, header++);

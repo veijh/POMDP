@@ -29,6 +29,8 @@ private:
     int act_dim;
     // dimension of observation space: O
     int obs_dim;
+
+    /* using ptr instead of var can avoid unnecessary copy */
     // state_dim transition probabilities taking specific action: AxSxS
     vector<Eigen::MatrixXf> trans_vec;
     // immediate rewards: SxA
