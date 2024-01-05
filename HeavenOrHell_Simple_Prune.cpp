@@ -43,7 +43,7 @@ public:
 
 int main() {
 //    Eigen::setNbThreads(10)
-    omp_set_num_threads(24);
+    omp_set_num_threads(6);
     double instant_reward = -1;
     INDEX_MAP state_index(5, 4, 2, 2);
 
@@ -182,7 +182,7 @@ int main() {
 
         cout << "pruning" << endl;
         // 随机采样对非积极约束剪枝
-        const int sample_num = 50000;
+        const int sample_num = 20000;
         int active_num = 0;
         Eigen::MatrixXd sample_point(1+total_state, sample_num);
         sample_point.setConstant(0);
