@@ -1,6 +1,16 @@
 //
 // Created by wjh on 23-12-18.
 //
+#ifndef EIGEN_USE_MKL_ALL
+#define EIGEN_USE_MKL_ALL
+#endif
+
+#ifndef EIGEN_VECTORIZE_SSE4_2
+#define EIGEN_VECTORIZE_SSE4_2
+#endif
+
+#pragma GCC optimize(3)
+
 #include "iostream"
 #include <iomanip>
 #include "vector"
@@ -12,16 +22,6 @@
 #include "Eigen/Dense"
 #include "set"
 #include "cstdlib"
-
-#ifndef EIGEN_USE_MKL_ALL
-#define EIGEN_USE_MKL_ALL
-#endif
-
-#ifndef EIGEN_VECTORIZE_SSE4_2
-#define EIGEN_VECTORIZE_SSE4_2
-#endif
-
-#pragma GCC optimize(3)
 
 using namespace std;
 

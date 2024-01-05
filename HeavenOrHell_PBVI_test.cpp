@@ -1,15 +1,6 @@
 //
 // Created by wjh on 23-12-18.
 //
-#include "iostream"
-#include <iomanip>
-#include "vector"
-#include "omp.h"
-#include "Eigen/Eigen"
-#include "Eigen/Dense"
-#include "set"
-#include "POMDP.h"
-
 #ifndef EIGEN_USE_MKL_ALL
 #define EIGEN_USE_MKL_ALL
 #endif
@@ -19,6 +10,15 @@
 #endif
 
 #pragma GCC optimize(3)
+
+#include "iostream"
+#include <iomanip>
+#include "vector"
+#include "omp.h"
+#include "Eigen/Eigen"
+#include "Eigen/Dense"
+#include "set"
+#include "POMDP.h"
 
 using namespace std;
 
