@@ -1,17 +1,6 @@
 //
 // Created by wjh on 23-12-18.
 //
-
-#ifndef EIGEN_USE_MKL_ALL
-#define EIGEN_USE_MKL_ALL
-#endif
-
-#ifndef EIGEN_VECTORIZE_SSE4_2
-#define EIGEN_VECTORIZE_SSE4_2
-#endif
-
-#pragma GCC optimize(3)
-
 #include "iostream"
 #include <iomanip>
 #include "vector"
@@ -23,6 +12,16 @@
 #include "Eigen/Dense"
 #include "set"
 #include "cstdlib"
+
+#ifndef EIGEN_USE_MKL_ALL
+#define EIGEN_USE_MKL_ALL
+#endif
+
+#ifndef EIGEN_VECTORIZE_SSE4_2
+#define EIGEN_VECTORIZE_SSE4_2
+#endif
+
+#pragma GCC optimize(3)
 
 using namespace std;
 
@@ -43,7 +42,7 @@ public:
 
 int main() {
 //    Eigen::setNbThreads(10)
-    omp_set_num_threads(24);
+    omp_set_num_threads(6);
     double instant_reward = -1;
     INDEX_MAP state_index(5, 4, 2, 2);
 
@@ -138,7 +137,6 @@ int main() {
             }
         }
 
-        cout << "calculate tmp" << endl;
         // 这一段可以并行计算
         // 约束数量
         for (int row = 0; row < gamma.rows(); row++) {
@@ -156,7 +154,6 @@ int main() {
             }
         }
 
-        cout << "calculate new gamma" << endl;
         new_gamma.conservativeResize(4 * gamma.rows() * gamma.rows(), 1 + total_state);
         // 动作
         for (int action = 0; action < 4; action++) {
@@ -180,9 +177,8 @@ int main() {
             }
         }
 
-        cout << "pruning" << endl;
         // 随机采样对非积极约束剪枝
-        const int sample_num = 50000;
+        const int sample_num = 20000;
         int active_num = 0;
         Eigen::MatrixXd sample_point(1+total_state, sample_num);
         sample_point.setConstant(0);
@@ -210,7 +206,6 @@ int main() {
             }
         }
 
-        cout << "copying gamma" << endl;
         gamma = gamma_prune;
     }
     cout << gamma << endl;

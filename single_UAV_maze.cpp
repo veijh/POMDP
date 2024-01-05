@@ -2,18 +2,6 @@
 // Created by wjh on 24-1-2.
 //
 
-#ifndef EIGEN_USE_MKL_ALL
-#define EIGEN_USE_MKL_ALL
-#endif
-
-#ifndef EIGEN_VECTORIZE_SSE4_2
-#define EIGEN_VECTORIZE_SSE4_2
-#endif
-
-#define CRASH_REWARD (-100)
-
-#pragma GCC optimize(3)
-
 #include "iostream"
 #include <iomanip>
 #include "vector"
@@ -24,6 +12,18 @@
 #include "POMDP.h"
 #include "single_UAV_maze.h"
 
+#ifndef EIGEN_USE_MKL_ALL
+#define EIGEN_USE_MKL_ALL
+#endif
+
+#ifndef EIGEN_VECTORIZE_SSE4_2
+#define EIGEN_VECTORIZE_SSE4_2
+#endif
+
+#define CRASH_REWARD (-100)
+
+//#pragma GCC optimize(3)
+
 typedef struct Node {
     int id;
     Eigen::Vector2d pos;
@@ -33,12 +33,7 @@ typedef struct Node {
 using namespace std;
 
 int main() {
-#if _OPENMP
-    cout << " support openmp " << endl;
-#else
-    cout << " not support openmp" << endl;
-#endif
-//    omp_set_num_threads(24);
+    omp_set_num_threads(6);
     int obs_dim = 3, state_dim = 84*512;
     int act_dim = 0;
 
@@ -194,19 +189,4 @@ int main() {
     }
 
     POMDP PBVI(tran_vec, reward, p_o_s);
-
-    // PBVI的核心
-    const int point_num = 3*state_dim/512;
-    Eigen::MatrixXf possible_state(2,3);
-    possible_state << 1, 0, 0.5,
-            0, 1, 0.5;
-    int active_num = 0;
-    // 信念点的集合 N x point_num
-    Eigen::MatrixXf belief_point(state_dim, point_num);
-    belief_point.setConstant(0);
-    for(int i = 0; i < state_dim/512; i++){
-        belief_point.block(2*i,3*i,2,3) = possible_state;
-    }
-
-    PBVI.PBVI(belief_point, 100);
 }
