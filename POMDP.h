@@ -50,7 +50,7 @@ public:
     // init POMDP
     POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r_s_a, const Eigen::MatrixXf &p_o_s);
     // use PBVI to solve POMDP, _belief_points: SxN
-    void PBVI(Eigen::MatrixXf _belief_points, int horizon_len);
+    void PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len);
     // select best actions according to belief state, _belief_points: SxN
     vector<int> select_action(Eigen::VectorXf _belief_state);
     // use bayesian inference to update the belief state, belief: Sx1

@@ -37,15 +37,15 @@ POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r
     cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 }
 
-void POMDP::PBVI(Eigen::MatrixXf _belief_points, int horizon_len) {
-    Eigen::MatrixXf augmented_belief = Eigen::MatrixXf::Zero(1 + state_dim, _belief_points.cols());
-    augmented_belief.bottomRows(state_dim) = _belief_points;
-
+void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
+//    Eigen::MatrixXf augmented_belief = Eigen::MatrixXf::Zero(1 + state_dim, _belief_points.cols());
+//    augmented_belief.bottomRows(state_dim) = _belief_points;
     struct timeval t1{},t2{};
     double timeuse;
     cout << "convert belief_point to sparse mat.";
     gettimeofday(&t1,nullptr);
-    belief_points = augmented_belief.sparseView();
+//    belief_points = augmented_belief.sparseView();
+    belief_points = _belief_points;
     gettimeofday(&t2,nullptr);
     timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
     cout<<" using time = " << timeuse << " s" << endl;  //(in sec)

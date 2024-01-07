@@ -20,6 +20,7 @@
 #include "omp.h"
 #include "Eigen/Eigen"
 #include "Eigen/Dense"
+#include "Eigen/Sparse"
 #include "unordered_map"
 #include "POMDP.h"
 #include "single_UAV_maze.h"
@@ -285,10 +286,14 @@ int main() {
     }
 
     // 信念点的集合 N x point_num
-    Eigen::MatrixXf belief_point(state_dim, point_num);
-    belief_point.setConstant(0);
+//    Eigen::MatrixXf belief_point(state_dim, point_num);
+    Eigen::SparseMatrix<float> belief_point(1+state_dim, point_num);
+    belief_point.setZero();
     for(int i = 0; i < state_dim/512; i++){
-        belief_point.block(512*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
+//        belief_point.block(512*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
+        Eigen::MatrixXf belief_point_col = Eigen::MatrixXf::Zero(1+state_dim, node_state_num);
+        belief_point_col.middleRows(1+512*i, 512) = possible_state;
+        belief_point.middleCols(node_state_num*i, node_state_num) = belief_point_col.sparseView();
     }
 
     PBVI.PBVI(belief_point, 100);
