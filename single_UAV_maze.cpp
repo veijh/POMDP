@@ -82,7 +82,7 @@ int main() {
     cout << " not support openmp" << endl;
 #endif
     omp_set_num_threads(6);
-    int obs_dim = 3, state_dim = 84*512;
+    int obs_dim = 3, state_dim = 84*128;
     int act_dim = 0;
 
     // read topo from file
@@ -127,7 +127,7 @@ int main() {
     fclose(edge_file);
 
     // unknown door
-    vector<vector<int>> unk_part{{6,7,8},{23,22,24},{9,10,11},{13,12,14},{21,19,20},{33,35,34},
+    vector<vector<int>> unk_part{{6,7,8},{9,10,11},{13,12,14},{33,35,34},
                                      {16,17,15,18},{25,26,27,28},{29,31,30,32}};
     unordered_map<int, int> var;
     for(int i = 0; i < unk_part.size(); i++){
@@ -137,10 +137,10 @@ int main() {
     }
 
     // all kinds of possible structure
-    vector<vector<Node>> all_adj_table(512, adj_table);
+    vector<vector<Node>> all_adj_table(128, adj_table);
 
     for(int i = 0; i < all_adj_table.size(); i++){
-        for(int bit = 0; bit < 9; bit++){
+        for(int bit = 0; bit < 7; bit++){
             int id_c1, id_c2;
             if( ((i >> bit) & 1) == 0){
                 id_c1 = unk_part[bit][0];
@@ -204,16 +204,16 @@ int main() {
     Eigen::MatrixXf p_o_s = Eigen::MatrixXf::Zero(obs_dim, state_dim);
     for(int s = 0; s < state_dim; s++){
         for(int act = 0; act < act_dim; act++){
-            // every node has 512 states
+            // every node has 128 states
             // dst node is an absorbed state
-            if(s/512 == 3 || s/512 == 4 || s/512 == 5){
+            if(s/128 == 3 || s/128 == 4 || s/128 == 5){
                 tran_vec[act](s, s) = 1;
                 reward(s, act) = 0;
                 continue;
             }
             // normal node
-            if(act < adj_table[s/512].edge_list.size()){
-                auto header = adj_table[s/512].edge_list.begin();
+            if(act < adj_table[s/128].edge_list.size()){
+                auto header = adj_table[s/128].edge_list.begin();
                 for(int mv = 0; mv < act; mv++, header++);
                 tran_vec[act](s, header->first) = 1;
                 reward(s, act) = -header->second;
@@ -224,8 +224,8 @@ int main() {
             }
         }
         // p_o_s
-        if (var.find(s / 512) != var.end()) {
-            if (((s % 512) >> var[s / 512] & 1) == 0) {
+        if (var.find(s / 128) != var.end()) {
+            if (((s % 128) >> var[s / 128] & 1) == 0) {
                 p_o_s(0, s) = 1;
                 p_o_s(1, s) = 0;
                 p_o_s(2, s) = 0;
@@ -246,25 +246,25 @@ int main() {
     POMDP PBVI(tran_vec, reward, p_o_s);
 
     // PBVI的核心
-    int node_state_num = (int)pow(3,9);
-    const int point_num = node_state_num*state_dim/512;
-    Eigen::MatrixXf possible_state(512, node_state_num);
+    int node_state_num = (int)pow(3,7);
+    const int point_num = node_state_num*state_dim/128;
+    Eigen::MatrixXf possible_state(128, node_state_num);
     possible_state.setZero();
-    // C(9,r)
+    // C(7,r)
     int count = 0;
     // 生成组合数索引，重点关注对象
-    for(int r = 0; r <= 9; r++){
+    for(int r = 0; r <= 7; r++){
         if(r == 0){
-            possible_state.col(count) = (float)pow(0.5, 9) * Eigen::MatrixXf::Ones(512,1);
+            possible_state.col(count) = (float)pow(0.5, 7) * Eigen::MatrixXf::Ones(128,1);
             count++;
             continue;
         }
-        auto C_n_r = generateCombinations(9, r);
+        auto C_n_r = generateCombinations(7, r);
         for(auto item:C_n_r){
             // 生成匹配的掩码，重点关注对象的所有可能的情况
             for(int mask = 0; mask < (int)pow(2,r); mask++){
                 // 标记匹配掩码的索引
-                for(unsigned int index = 0; index < 512; index++){
+                for(unsigned int index = 0; index < 128; index++){
                     // 检查index能否匹配
                     bool is_matched = true;
                     for(int bit_index = 0; bit_index < r; bit_index++){
@@ -275,9 +275,9 @@ int main() {
                             break;
                         }
                     }
-                    // index如果能匹配，对应概率为1/2^(9-r)
+                    // index如果能匹配，对应概率为1/2^(7-r)
                     if(is_matched) {
-                        possible_state(index, count) = (float)pow(0.5, 9-r);
+                        possible_state(index, count) = (float)pow(0.5, 7-r);
                     }
                 }
                 count++;
@@ -289,10 +289,10 @@ int main() {
 //    Eigen::MatrixXf belief_point(state_dim, point_num);
     Eigen::SparseMatrix<float> belief_point(1+state_dim, point_num);
     belief_point.setZero();
-    for(int i = 0; i < state_dim/512; i++){
-//        belief_point.block(512*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
+    for(int i = 0; i < state_dim/128; i++){
+//        belief_point.block(128*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
         Eigen::MatrixXf belief_point_col = Eigen::MatrixXf::Zero(1+state_dim, node_state_num);
-        belief_point_col.middleRows(1+512*i, 512) = possible_state;
+        belief_point_col.middleRows(1+128*i, 128) = possible_state;
         belief_point.middleCols(node_state_num*i, node_state_num) = belief_point_col.sparseView();
     }
 
