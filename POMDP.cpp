@@ -62,7 +62,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         Eigen::MatrixXf new_alpha;
 
         cout << "initialize tmp" << endl;
-        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>".
+        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>". AxOxNx(1+S)
         vector<vector<Eigen::MatrixXf>> tmp;
         tmp.resize(act_dim);
         for (int action = 0; action < act_dim; ++action) {
@@ -120,12 +120,13 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                 // 对于某个指定观测
                 for(int z = 0; z < obs_dim; z++){
                     // 计算V(b|z)
-                    // 查找使得alpha*b最大的alpha
-                    auto prod = tmp[action][z] * belief_points;
-                    int index = max_element(prod_vec.begin(), prod_vec.end()) - prod_vec.begin();
+                    // 查找使得alpha*b最大的alpha. prod: 1x(1+S)x(1+S)xN = 1xN
+                    auto prod = tmp[action][z].row(k) * belief_points;
+                    int index = 0;
+                    prod.maxCoeff(&index);
 
                     // 求和得到Vbar
-                    new_alpha.row(action + act_dim * k) += tmp[index][action][z];
+                    new_alpha.row(action + act_dim * k) += tmp[action][z].row(index);
                 }
                 new_alpha(action + act_dim * k, 0) = action;
 
