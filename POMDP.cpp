@@ -40,15 +40,16 @@ POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r
 void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 //    Eigen::MatrixXf augmented_belief = Eigen::MatrixXf::Zero(1 + state_dim, _belief_points.cols());
 //    augmented_belief.bottomRows(state_dim) = _belief_points;
-    struct timeval t1{},t2{};
-    double timeuse;
-    cout << "convert belief_point to sparse mat.";
-    gettimeofday(&t1,nullptr);
+    cout << "start to solve POMDP using PBVI" << endl;
+//    struct timeval t1{},t2{};
+//    double timeuse;
+//    cout << "convert belief_point to sparse mat.";
+//    gettimeofday(&t1,nullptr);
 //    belief_points = augmented_belief.sparseView();
     belief_points = _belief_points;
-    gettimeofday(&t2,nullptr);
-    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
-    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
+//    gettimeofday(&t2,nullptr);
+//    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+//    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 
     int points_num = belief_points.cols();
 
@@ -74,7 +75,10 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
             }
         }
 
-        cout << "calculate tmp" << endl;
+        cout << "calculate tmp.";
+        struct timeval t1{},t2{};
+        double timeuse;
+        gettimeofday(&t1,nullptr);
         // 这一段可以并行计算
         // tmp一共有points_num * action * observation 个元素
         // belief数量
@@ -101,8 +105,12 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                 }
             }
         }
+        gettimeofday(&t2,nullptr);
+        timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+        cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 
-        cout << "update alpha" << endl;
+        cout << "update alpha." << endl;
+        gettimeofday(&t1,nullptr);
         // Vbar(b)是可以求解的，因此每个belief点对应action个可能的alpha_vector
         new_alpha.conservativeResize(act_dim * points_num, 1 + state_dim);
         new_alpha.setConstant(0);
@@ -116,9 +124,9 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                 for(int z = 0; z < obs_dim; z++){
                     // 计算V(b|z)
                     // 查找使得alpha*b最大的alpha
-                    vector<double> prod_vec;
+                    vector<float> prod_vec;
                     for(int new_k = 0; new_k < points_num; new_k++){
-                        double prod = tmp[new_k][action][z] * belief_points.col(k);
+                        float prod = tmp[new_k][action][z] * belief_points.col(k);
                         prod_vec.push_back(prod);
                     }
                     int index = max_element(prod_vec.begin(), prod_vec.end()) - prod_vec.begin();
@@ -139,8 +147,11 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
             result.maxCoeff(&best_action);
             alpha_vector.row(k) = new_alpha.row(best_action + act_dim*k);
         }
+        gettimeofday(&t2,nullptr);
+        timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
+        cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
     }
-    cout << "alpha_vector:" << endl << alpha_vector << endl;
+//    cout << "alpha_vector:" << endl << alpha_vector << endl;
 }
 
 vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
