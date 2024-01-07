@@ -60,18 +60,15 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
     for (int horizon = 0; horizon < horizon_len; horizon++) {
         cout << "iteration: " << horizon << endl;
         Eigen::MatrixXf new_alpha;
-        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>".
 
         cout << "initialize tmp" << endl;
-        vector<vector<vector<Eigen::RowVectorXf>>> tmp;
-        tmp.resize(points_num);
-        for (int row = 0; row < points_num; ++row) {
-            tmp[row].resize(act_dim);
-            for (int action = 0; action < act_dim; ++action) {
-                tmp[row][action].resize(obs_dim);
-                for (int z = 0; z < obs_dim; ++z) {
-                    tmp[row][action][z].conservativeResize(1 + state_dim);
-                }
+        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>".
+        vector<vector<Eigen::MatrixXf>> tmp;
+        tmp.resize(act_dim);
+        for (int action = 0; action < act_dim; ++action) {
+            tmp[action].resize(obs_dim);
+            for (int z = 0; z < obs_dim; ++z) {
+                tmp[action][z].conservativeResize(points_num, 1 + state_dim);
             }
         }
 
@@ -94,8 +91,8 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                     double timeuse;
                     gettimeofday(&t1,nullptr);
 #endif
-                    tmp[k][action][z](0,0) = 0;
-                    tmp[k][action][z].rightCols(state_dim) = alpha_vector.row(k).rightCols(state_dim).cwiseProduct(p_obs_in_s.row(z))
+                    tmp[action][z](k,0) = 0;
+                    tmp[action][z].row(k).rightCols(state_dim) = alpha_vector.row(k).rightCols(state_dim).cwiseProduct(p_obs_in_s.row(z))
                                                                * trans_vec[action].transpose();
 #ifdef DBG
                     gettimeofday(&t2,nullptr);
@@ -124,11 +121,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                 for(int z = 0; z < obs_dim; z++){
                     // 计算V(b|z)
                     // 查找使得alpha*b最大的alpha
-                    vector<float> prod_vec;
-                    for(int new_k = 0; new_k < points_num; new_k++){
-                        float prod = tmp[new_k][action][z] * belief_points.col(k);
-                        prod_vec.push_back(prod);
-                    }
+                    auto prod = tmp[action][z] * belief_points;
                     int index = max_element(prod_vec.begin(), prod_vec.end()) - prod_vec.begin();
 
                     // 求和得到Vbar
