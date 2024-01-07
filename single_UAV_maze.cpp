@@ -32,6 +32,48 @@ typedef struct Node {
 
 using namespace std;
 
+// dim: C(n,r) x r
+vector<vector<int>> generateCombinations(int n, int r) {
+    vector<vector<int>> output;
+    if(r == 0) return output;
+    vector<int> combination(r, 0);
+
+    // 初始化组合的初始状态
+    for (int i = 0; i < r; ++i) {
+        combination[i] = i;
+    }
+
+    while (combination[0] <= n - r) {
+        // 输出当前组合
+//        for (int num : combination) {
+//            cout << num << " ";
+//        }
+//        cout << endl;
+        output.push_back(combination);
+
+        // 生成下一个组合
+        int i = r - 1;
+        while (i >= 0 && combination[i] == n - r + i) {
+            --i;
+        }
+
+        if (i >= 0) {
+            ++combination[i];
+            for (int j = i + 1; j < r; ++j) {
+                combination[j] = combination[j - 1] + 1;
+            }
+        } else {
+            break;  // 已生成所有组合
+        }
+    }
+    return output;
+}
+
+// get the bit of value, index:[....76543210]
+unsigned int get_bit(int value, int r){
+    return (value >> r) & 1;
+}
+
 int main() {
 #if _OPENMP
     cout << " support openmp " << endl;
@@ -203,16 +245,50 @@ int main() {
     POMDP PBVI(tran_vec, reward, p_o_s);
 
     // PBVI的核心
-    const int point_num = 3*state_dim/512;
-    Eigen::MatrixXf possible_state(2,3);
-    possible_state << 1, 0, 0.5,
-            0, 1, 0.5;
-    int active_num = 0;
+    int node_state_num = (int)pow(3,9);
+    const int point_num = node_state_num*state_dim/512;
+    Eigen::MatrixXf possible_state(512, node_state_num);
+    possible_state.setZero();
+    // C(9,r)
+    int count = 0;
+    // 生成组合数索引，重点关注对象
+    for(int r = 0; r <= 9; r++){
+        if(r == 0){
+            possible_state.col(count) = (float)pow(0.5, 9) * Eigen::MatrixXf::Ones(512,1);
+            count++;
+            continue;
+        }
+        auto C_n_r = generateCombinations(9, r);
+        for(auto item:C_n_r){
+            // 生成匹配的掩码，重点关注对象的所有可能的情况
+            for(int mask = 0; mask < (int)pow(2,r); mask++){
+                // 标记匹配掩码的索引
+                for(unsigned int index = 0; index < 512; index++){
+                    // 检查index能否匹配
+                    bool is_matched = true;
+                    for(int bit_index = 0; bit_index < r; bit_index++){
+                        unsigned int bit = 0;
+                        bit = get_bit(mask, bit_index);
+                        if(bit != get_bit(index, item[bit_index])){
+                            is_matched = false;
+                            break;
+                        }
+                    }
+                    // index如果能匹配，对应概率为1/2^(9-r)
+                    if(is_matched) {
+                        possible_state(index, count) = (float)pow(0.5, 9-r);
+                    }
+                }
+                count++;
+            }
+        }
+    }
+
     // 信念点的集合 N x point_num
     Eigen::MatrixXf belief_point(state_dim, point_num);
     belief_point.setConstant(0);
     for(int i = 0; i < state_dim/512; i++){
-        belief_point.block(2*i,3*i,2,3) = possible_state;
+        belief_point.block(512*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
     }
 
     PBVI.PBVI(belief_point, 100);
