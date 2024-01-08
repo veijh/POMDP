@@ -18,6 +18,7 @@
 #include "set"
 #include "cstdlib"
 #include <sys/time.h>
+#include <zlib.h>
 
 #define EPS (1e-5)
 

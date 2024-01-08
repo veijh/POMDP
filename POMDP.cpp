@@ -3,6 +3,40 @@
 //
 #include "POMDP.h"
 
+namespace MATSL{
+    template<class Derived>
+    void write_binary(const std::string &filename,
+                      const Eigen::PlainObjectBase<Derived> &matrix)
+    {
+        typedef typename Derived::Index Index;
+        typedef typename Derived::Scalar Scalar;
+
+        gzFile out = gzopen(filename.c_str(), "wb");
+        Index rows=matrix.rows(), cols=matrix.cols();
+
+        gzwrite(out, (char*) (&rows), sizeof(Index));
+        gzwrite(out, (char*) (&cols), sizeof(Index));
+        gzwrite(out, (char*) matrix.data(), rows*cols*sizeof(Scalar) );
+        gzclose(out);
+    }
+
+    template<class Derived>
+    void read_binary(const std::string &filename,
+                     Eigen::PlainObjectBase<Derived> &matrix)
+    {
+        typedef typename Derived::Index Index;
+        typedef typename Derived::Scalar Scalar;
+
+        gzFile in = gzopen(filename.c_str(), "rb");
+        Index rows=0, cols=0;
+        gzread(in, (char*) (&rows),sizeof(Index));
+        gzread(in, (char*) (&cols),sizeof(Index));
+        matrix.resize(rows, cols);
+        gzread(in, (char*) matrix.data(), rows*cols*sizeof(Scalar) );
+        gzclose(in);
+    }
+} // MATSL::
+
 POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r_s_a, const Eigen::MatrixXf &p_o_s) {
     act_dim = transition.size();
     state_dim = r_s_a.rows();
@@ -52,6 +86,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 //    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 
     int points_num = belief_points.cols();
+    cout << "the num of belief points: " << points_num << endl;
 
     alpha_vector.conservativeResize(points_num, 1 + state_dim);
     alpha_vector.setConstant(0);
@@ -146,6 +181,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
     }
 //    cout << "alpha_vector:" << endl << alpha_vector << endl;
+    MATSL::write_binary("../output.bin", alpha_vector);
 }
 
 vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
