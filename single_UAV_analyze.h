@@ -1,0 +1,8 @@
+//
+// Created by wjh on 24-1-10.
+//
+
+#ifndef CPP_TEST_SINGLE_UAV_ANALYZE_H
+#define CPP_TEST_SINGLE_UAV_ANALYZE_H
+
+#endif //CPP_TEST_SINGLE_UAV_ANALYZE_H

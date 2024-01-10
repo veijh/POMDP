@@ -58,4 +58,38 @@ public:
     Eigen::VectorXf bayesian_filter(Eigen::VectorXf _belief_state, int _obs);
 };
 
+namespace MATSL{
+    template<class Derived>
+    void write_binary(const std::string &filename,
+                      const Eigen::PlainObjectBase<Derived> &matrix)
+    {
+        typedef typename Derived::Index Index;
+        typedef typename Derived::Scalar Scalar;
+
+        gzFile out = gzopen(filename.c_str(), "wb");
+        Index rows=matrix.rows(), cols=matrix.cols();
+
+        gzwrite(out, (char*) (&rows), sizeof(Index));
+        gzwrite(out, (char*) (&cols), sizeof(Index));
+        gzwrite(out, (char*) matrix.data(), rows*cols*sizeof(Scalar) );
+        gzclose(out);
+    }
+
+    template<class Derived>
+    void read_binary(const std::string &filename,
+                     Eigen::PlainObjectBase<Derived> &matrix)
+    {
+        typedef typename Derived::Index Index;
+        typedef typename Derived::Scalar Scalar;
+
+        gzFile in = gzopen(filename.c_str(), "rb");
+        Index rows=0, cols=0;
+        gzread(in, (char*) (&rows),sizeof(Index));
+        gzread(in, (char*) (&cols),sizeof(Index));
+        matrix.resize(rows, cols);
+        gzread(in, (char*) matrix.data(), rows*cols*sizeof(Scalar) );
+        gzclose(in);
+    }
+} // MATSL::
+
 #endif //CPP_TEST_POMDP_H
