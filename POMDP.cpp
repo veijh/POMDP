@@ -3,40 +3,6 @@
 //
 #include "POMDP.h"
 
-namespace MATSL{
-    template<class Derived>
-    void write_binary(const std::string &filename,
-                      const Eigen::PlainObjectBase<Derived> &matrix)
-    {
-        typedef typename Derived::Index Index;
-        typedef typename Derived::Scalar Scalar;
-
-        gzFile out = gzopen(filename.c_str(), "wb");
-        Index rows=matrix.rows(), cols=matrix.cols();
-
-        gzwrite(out, (char*) (&rows), sizeof(Index));
-        gzwrite(out, (char*) (&cols), sizeof(Index));
-        gzwrite(out, (char*) matrix.data(), rows*cols*sizeof(Scalar) );
-        gzclose(out);
-    }
-
-    template<class Derived>
-    void read_binary(const std::string &filename,
-                     Eigen::PlainObjectBase<Derived> &matrix)
-    {
-        typedef typename Derived::Index Index;
-        typedef typename Derived::Scalar Scalar;
-
-        gzFile in = gzopen(filename.c_str(), "rb");
-        Index rows=0, cols=0;
-        gzread(in, (char*) (&rows),sizeof(Index));
-        gzread(in, (char*) (&cols),sizeof(Index));
-        matrix.resize(rows, cols);
-        gzread(in, (char*) matrix.data(), rows*cols*sizeof(Scalar) );
-        gzclose(in);
-    }
-} // MATSL::
-
 POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r_s_a, const Eigen::MatrixXf &p_o_s) {
     act_dim = transition.size();
     state_dim = r_s_a.rows();
@@ -156,7 +122,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                 for(int z = 0; z < obs_dim; z++){
                     // 计算V(b|z)
                     // 查找使得alpha*b最大的alpha. prod: 1x(1+S)x(1+S)xN = 1xN
-                    auto prod = tmp[action][z].row(k) * belief_points;
+                    Eigen::RowVectorXf prod = tmp[action][z].row(k) * belief_points;
                     int index = 0;
                     prod.maxCoeff(&index);
 
@@ -172,7 +138,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 
             // 从action中选择最优动作，更新alpha_vector
             int best_action = 0;
-            auto result = new_alpha.block(act_dim*k, 0, act_dim, 1+state_dim) * belief_points.col(k);
+            Eigen::VectorXf result = new_alpha.block(act_dim*k, 0, act_dim, 1+state_dim) * belief_points.col(k);
             result.maxCoeff(&best_action);
             alpha_vector.row(k) = new_alpha.row(best_action + act_dim*k);
         }
@@ -187,7 +153,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
     Eigen::VectorXf adv_belief_state(1 + state_dim);
     adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-    auto result = alpha_vector * adv_belief_state;
+    Eigen::VectorXf result = alpha_vector * adv_belief_state;
     double max_v = result.maxCoeff();
     vector<int> best_actions;
     for(int i = 0; i < alpha_vector.rows(); i++){
