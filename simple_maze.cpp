@@ -121,11 +121,12 @@ int main() {
     // unknown door
     vector<vector<int>> unk_part{{6,7,8},{9,10,11},{13,12,14},{33,35,34},
                                      {16,17,15,18},{25,26,27,28}};
-    cout << "[INFO] the number of unknown doors is " << unk_part.size() << endl;
+    const int doors_num = unk_part.size();
+    cout << "[INFO] the number of unknown doors is " << doors_num << endl;
 
     unordered_map<int, int> var;
     vector<int> unk_node;
-    for(int i = 0; i < unk_part.size(); i++){
+    for(int i = 0; i < doors_num; i++){
         for(auto item:unk_part[i]){
             var[item] = i;
             unk_node.push_back(item);
@@ -194,7 +195,7 @@ int main() {
     vector<Map> all_compact_map(64, compact_map);
 
     for(int i = 0; i < all_compact_map.size(); i++){
-        for(int bit = 0; bit < unk_part.size(); bit++){
+        for(int bit = 0; bit < doors_num; bit++){
             int id_c1, id_c2;
             if( ((i >> bit) & 1) == 0){
                 id_c1 = unk_part[bit][0];
@@ -303,5 +304,60 @@ int main() {
     // init
     cout << "[LOG] start to init POMDP" << endl;
     POMDP PBVI(tran_vec, reward, p_o_s);
+
+    // PBVI的核心
+    int node_state_num = (int)pow(3,doors_num);
+    const int point_num = node_state_num*(state_dim-1)/64 + 1;
+    Eigen::MatrixXf possible_state(64, node_state_num);
+    possible_state.setZero();
+    // C(doors_num,r)
+    int count = 0;
+    // 生成组合数索引，重点关注对象
+    for(int r = 0; r <= doors_num; r++){
+        if(r == 0){
+            possible_state.col(count) = (float)pow(0.5, doors_num) * Eigen::MatrixXf::Ones(64,1);
+            count++;
+            continue;
+        }
+        auto C_n_r = generateCombinations(doors_num, r);
+        for(auto item:C_n_r){
+            // 生成匹配的掩码，重点关注对象的所有可能的情况
+            for(int mask = 0; mask < (int)pow(2,r); mask++){
+                // 标记匹配掩码的索引
+                for(unsigned int index = 0; index < 64; index++){
+                    // 检查index能否匹配
+                    bool is_matched = true;
+                    for(int bit_index = 0; bit_index < r; bit_index++){
+                        unsigned int bit = 0;
+                        bit = get_bit(mask, bit_index);
+                        if(bit != get_bit(index, item[bit_index])){
+                            is_matched = false;
+                            break;
+                        }
+                    }
+                    // index如果能匹配，对应概率为1/2^(doors_num-r)
+                    if(is_matched) {
+                        possible_state(index, count) = (float)pow(0.5, doors_num-r);
+                    }
+                }
+                count++;
+            }
+        }
+    }
+
+    // 信念点的集合 N x point_num
+//    Eigen::MatrixXf belief_point(state_dim, point_num);
+    Eigen::SparseMatrix<float> belief_point(1+state_dim, point_num);
+    belief_point.setZero();
+    for(int i = 0; i < (state_dim-1)/64; i++){
+//        belief_point.block(64*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
+        Eigen::MatrixXf belief_point_col = Eigen::MatrixXf::Zero(1+state_dim, node_state_num);
+        belief_point_col.middleRows(1+64*i, 64) = possible_state;
+        belief_point.middleCols(node_state_num*i, node_state_num) = belief_point_col.sparseView();
+    }
+    belief_point.insert(state_dim, point_num-1) = 1;
+    belief_point.makeCompressed();
+
+    PBVI.PBVI(belief_point, 50);
 
 }
