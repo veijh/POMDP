@@ -7,13 +7,13 @@ POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r
     act_dim = transition.size();
     state_dim = r_s_a.rows();
     obs_dim = p_o_s.rows();
-    cout << "state_dim space dim: " << state_dim << ", "
+    cout << "[INFO] state_dim space dim: " << state_dim << ", "
          << "action space dim: " << act_dim << ", "
          << "obs_dim space dim: " << obs_dim << endl;
 
     struct timeval t1{},t2{};
     double timeuse;
-    cout << "convert T(a,s,s) to sparse mat.";
+    cout << "[LOG] convert T(a,s,s) to sparse mat.";
     gettimeofday(&t1,nullptr);
     for(int i = 0; i < transition.size(); i++) {
         trans_vec.push_back(transition[i].sparseView());
@@ -22,14 +22,14 @@ POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r
     timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
     cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 
-    cout << "copy r(s,a).";
+    cout << "[LOG] copy r(s,a).";
     gettimeofday(&t1,nullptr);
     rwd_s_a = r_s_a;
     gettimeofday(&t2,nullptr);
     timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
     cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 
-    cout << "convert p(o,s) to sparse mat.";
+    cout << "[LOG] convert p(o,s) to sparse mat.";
     gettimeofday(&t1,nullptr);
     p_obs_in_s = p_o_s.sparseView();
     gettimeofday(&t2,nullptr);
@@ -40,7 +40,7 @@ POMDP::POMDP(const vector<Eigen::MatrixXf> &transition, const Eigen::MatrixXf &r
 void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 //    Eigen::MatrixXf augmented_belief = Eigen::MatrixXf::Zero(1 + state_dim, _belief_points.cols());
 //    augmented_belief.bottomRows(state_dim) = _belief_points;
-    cout << "start to solve POMDP using PBVI" << endl;
+    cout << "[LOG] start to solve POMDP using PBVI" << endl;
 //    struct timeval t1{},t2{};
 //    double timeuse;
 //    cout << "convert belief_point to sparse mat.";
@@ -52,26 +52,26 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 //    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
 
     int points_num = belief_points.cols();
-    cout << "the num of belief points: " << points_num << endl;
+    cout << "[INFO] the num of belief points: " << points_num << endl;
 
     alpha_vector.conservativeResize(points_num, 1 + state_dim);
     alpha_vector.setConstant(0);
+
+    cout << "[LOG] initialize tmp" << endl;
+    // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>". AxOxNx(1+S)
+    vector<vector<Eigen::MatrixXf>> tmp;
+    tmp.resize(act_dim);
+    for (int action = 0; action < act_dim; ++action) {
+        tmp[action].resize(obs_dim);
+        for (int z = 0; z < obs_dim; ++z) {
+            tmp[action][z].conservativeResize(points_num, 1 + state_dim);
+        }
+    }
 
     // calculate the value function
     for (int horizon = 0; horizon < horizon_len; horizon++) {
         cout << "iteration: " << horizon << endl;
         Eigen::MatrixXf new_alpha;
-
-        cout << "initialize tmp" << endl;
-        // In fact, the type of tmp can be "vector<vector<Eigen::MatrixXf>>". AxOxNx(1+S)
-        vector<vector<Eigen::MatrixXf>> tmp;
-        tmp.resize(act_dim);
-        for (int action = 0; action < act_dim; ++action) {
-            tmp[action].resize(obs_dim);
-            for (int z = 0; z < obs_dim; ++z) {
-                tmp[action][z].conservativeResize(points_num, 1 + state_dim);
-            }
-        }
 
         cout << "calculate tmp.";
         struct timeval t1{},t2{};

@@ -77,9 +77,9 @@ unsigned int get_bit(int value, int r){
 
 int main() {
 #if _OPENMP
-    cout << " support openmp " << endl;
+    cout << "support openmp " << endl;
 #else
-    cout << " not support openmp" << endl;
+    cout << "not support openmp" << endl;
 #endif
     omp_set_num_threads(6);
     int obs_dim = 3, state_dim = 84*64;
