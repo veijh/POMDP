@@ -173,7 +173,7 @@ int main() {
     }
 
     /*
-    for(auto node:table){
+    for(auto node:adj_table){
         cout << "node " << node.id << " >> ";
         if(node.edge_list.size() > act_dim){
             act_dim = node.edge_list.size();
@@ -183,7 +183,7 @@ int main() {
         }
         cout << endl;
     }
-     */
+    */
 
     // determine the act_dim
     for(auto table:all_adj_table){
@@ -200,26 +200,40 @@ int main() {
     MATSL::read_binary("../output.bin", alpha_vector);
 
     Eigen::VectorXf _belief_state(state_dim);
-    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Ones(64);
-    _belief_state.setConstant(0);
-    _belief_state.middleRows(1, 64) = 1.0/64.0*node_belief_state;
+    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(64);
+    node_belief_state(0) = 1;
 
-    Eigen::VectorXf adv_belief_state(1 + state_dim);
-    adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-    cout << "start to calculate result" << endl;
-    Eigen::VectorXf result = alpha_vector * adv_belief_state;
-    cout << "start to search max_v" << endl;
-    double max_v = result.maxCoeff();
-    cout << "start to match the best action" << endl;
-    vector<int> best_actions;
-    for(int i = 0; i < alpha_vector.rows(); i++){
-        if(abs(max_v - result(i)) < EPS) {
-            if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
-                best_actions.push_back((int)alpha_vector(i,0));
+    for(int node = 0; node < 84; node++){
+        _belief_state.setConstant(0);
+        _belief_state.middleRows(64*node, 64) = node_belief_state;
+
+        Eigen::VectorXf adv_belief_state(1 + state_dim);
+        adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
+//        cout << adv_belief_state;
+//        cout << "start to calculate result" << endl;
+        Eigen::VectorXf result = alpha_vector * adv_belief_state;
+//        cout << "start to search max_v" << endl;
+        double max_v = result.maxCoeff();
+//        cout << "start to match the best action" << endl;
+        vector<int> best_actions;
+        for(int i = 0; i < alpha_vector.rows(); i++){
+            if(abs(max_v - result(i)) < 0.1) {
+                if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
+                    best_actions.push_back((int)alpha_vector(i,0));
+                }
             }
         }
+
+        cout << node << ": ";
+        for(auto act:best_actions){
+            cout << act << ",";
+            if(act < adj_table[node].edge_list.size()){
+                auto header = adj_table[node].edge_list.begin();
+                for(int mv = 0; mv < act; mv++, header++);
+                cout << header->first << "; ";
+            }
+        }
+        cout << endl;
     }
-    for(auto ac:best_actions){
-        cout << ac << " ";
-    }
+
 }

@@ -46,7 +46,7 @@ int main() {
     const int total_state = 16;
 
     // 观测的似然
-    Eigen::MatrixXd p_obs_state(3, total_state);
+    Eigen::MatrixXf p_obs_state(3, total_state);
     p_obs_state.setConstant(0);
     p_obs_state.row(2).setConstant(1);
     p_obs_state(0, 14) = 1;
@@ -57,8 +57,8 @@ int main() {
     p_obs_state(2, 15) = 0;
 
     // 状态转移
-    vector<Eigen::MatrixXd> trans_vec;
-    Eigen::MatrixXd transition(total_state, total_state);
+    vector<Eigen::MatrixXf> trans_vec;
+    Eigen::MatrixXf transition(total_state, total_state);
     transition.setConstant(0);
     trans_vec.push_back(transition);
     trans_vec.push_back(transition);
@@ -119,7 +119,7 @@ int main() {
 
     // 奖励函数
     // reward可以写成R(s,a)矩阵
-    Eigen::MatrixXd reward(total_state, 4);
+    Eigen::MatrixXf reward(total_state, 4);
     reward.setConstant(-1);
     reward(4, UP) = 100;
     reward(5, UP) = -100;
@@ -132,12 +132,12 @@ int main() {
 
     // PBVI的核心
     const int point_num = 3*total_state/2;
-    Eigen::MatrixXd possible_state(2,3);
+    Eigen::MatrixXf possible_state(2,3);
     possible_state << 1, 0, 0.5,
             0, 1, 0.5;
     int active_num = 0;
     // 信念点的集合 N x point_num
-    Eigen::MatrixXd belief_point(total_state, point_num);
+    Eigen::MatrixXf belief_point(total_state, point_num);
     belief_point.setConstant(0);
     for(int i = 0; i < total_state/2; i++){
         belief_point.block(2*i,3*i,2,3) = possible_state;

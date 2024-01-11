@@ -46,7 +46,7 @@ int main() {
     double instant_reward = -1;
     INDEX_MAP state_index(5, 4, 2, 2);
 
-    const int total_state = 16;
+    const int total_state = 16+1;
 
     // 观测的似然
     Eigen::Matrix2Xd p_obs_state(2, total_state);
@@ -80,45 +80,51 @@ int main() {
                 break;
             case 2:
                 trans_vec[UP](i, i - 4) = 1;
-                trans_vec[DOWN](i, i) = 1;
-                trans_vec[LEFT](i, i) = 1;
+                trans_vec[DOWN](i, 16) = 1;
+                trans_vec[LEFT](i, 16) = 1;
                 trans_vec[RIGHT](i, i + 2) = 1;
                 break;
             case 3:
-                trans_vec[UP](i, i) = 1;
+                trans_vec[UP](i, 16) = 1;
                 trans_vec[DOWN](i, i + 4) = 1;
                 trans_vec[LEFT](i, i - 2) = 1;
                 trans_vec[RIGHT](i, i + 2) = 1;
                 break;
             case 4:
                 trans_vec[UP](i, i - 6) = 1;
-                trans_vec[DOWN](i, i) = 1;
+                trans_vec[DOWN](i, 16) = 1;
                 trans_vec[LEFT](i, i - 2) = 1;
-                trans_vec[RIGHT](i, i) = 1;
+                trans_vec[RIGHT](i, 16) = 1;
                 break;
             case 5:
                 trans_vec[UP](i, i - 4) = 1;
                 trans_vec[DOWN](i, i + 2) = 1;
-                trans_vec[LEFT](i, i) = 1;
-                trans_vec[RIGHT](i, i) = 1;
+                trans_vec[LEFT](i, 16) = 1;
+                trans_vec[RIGHT](i, 16) = 1;
                 break;
             case 6:
                 trans_vec[UP](i, i - 2) = 1;
-                trans_vec[DOWN](i, i) = 1;
-                trans_vec[LEFT](i, i) = 1;
+                trans_vec[DOWN](i, 16) = 1;
+                trans_vec[LEFT](i, 16) = 1;
                 trans_vec[RIGHT](i, i + 2) = 1;
                 break;
             case 7:
+                trans_vec[UP](i, 16) = 1;
+                trans_vec[DOWN](i, 16) = 1;
+                trans_vec[LEFT](i, i - 2) = 1;
+                trans_vec[RIGHT](i, 16) = 1;
+                break;
+            case 8:
                 trans_vec[UP](i, i) = 1;
                 trans_vec[DOWN](i, i) = 1;
-                trans_vec[LEFT](i, i - 2) = 1;
+                trans_vec[LEFT](i, i) = 1;
                 trans_vec[RIGHT](i, i) = 1;
                 break;
         }
     }
 
     // PBVI的核心
-    const int point_num = 3*total_state/2;
+    const int point_num = 3*(total_state-1)/2;
     Eigen::MatrixXd possible_state(2,3);
     possible_state << 1, 0, 0.5,
             0, 1, 0.5;
@@ -126,7 +132,7 @@ int main() {
     // 信念点的集合 N+1 x point_num
     Eigen::MatrixXd belief_point(1+total_state, point_num);
     belief_point.setConstant(0);
-    for(int i = 0; i < total_state/2; i++){
+    for(int i = 0; i < (total_state-1)/2; i++){
         belief_point.block(1+2*i,3*i,2,3) = possible_state;
     }
     // 每一个信念点对应一个alpha_vector(行向量) point_num x N+1
@@ -195,7 +201,8 @@ int main() {
                     if (s == 5 && action == UP) reward = -100;
                     if (s == 8 && action == UP) reward = -100;
                     if (s == 9 && action == UP) reward = 100;
-                    if (s == 0 || s == 1 || s == 2 || s == 3) reward = 0;
+                    if (trans_vec[action](s, 16) == 1) reward = -200;
+                    if (s == 0 || s == 1 || s == 2 || s == 3 || s == 16) reward = 0;
                     new_alpha(action + 4*k, 1+s) += reward;
                 }
             }
