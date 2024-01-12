@@ -322,8 +322,8 @@ int main() {
     cout << alpha_vector;
 
     Eigen::VectorXf _belief_state(state_dim);
-    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(8);
-    node_belief_state(0) = 1;
+    Eigen::VectorXf node_belief_state = 0.125*Eigen::VectorXf::Ones(8);
+//    node_belief_state(0) = 1;
 
     cout << compact_map.get_node_num() << endl;
 
@@ -341,7 +341,7 @@ int main() {
 //        cout << "start to match the best action" << endl;
         vector<int> best_actions;
         for(int i = 0; i < alpha_vector.rows(); i++){
-            if(abs(max_v - result(i)) < 0.01) {
+            if(abs(max_v - result(i)) < 0.0001) {
                 if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
                     best_actions.push_back((int)alpha_vector(i,0));
                 }
@@ -353,7 +353,8 @@ int main() {
             if(act < fc_compact_map.adj_table[state_map[node]].edge_list.size()){
                 auto header = fc_compact_map.adj_table[state_map[node]].edge_list.begin();
                 for(int mv = 0; mv < act; mv++, header++);
-                cout << header->first << "; ";            }
+                cout << header->first << "; ";
+            }
             else
             {
                 cout << "act: " << act << ", ?? ";
