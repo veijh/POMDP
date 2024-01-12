@@ -120,7 +120,7 @@ int main() {
     */
 
     // unknown door
-    vector<vector<int>> unk_part{{6,7,8},{9,10,11},{13,12,14},{33,35,34},
+    vector<vector<int>> unk_part{{6,7,8},
                                      {16,17,15,18},{25,26,27,28}};
     const int doors_num = unk_part.size();
     cout << "[INFO] the number of unknown doors is " << doors_num << endl;
@@ -193,7 +193,7 @@ int main() {
     cout << "[INFO] act_dim is " << act_dim << endl;
 
     // all kinds of possible structure
-    vector<Map> all_compact_map(64, compact_map);
+    vector<Map> all_compact_map(8, compact_map);
 
     for(int i = 0; i < all_compact_map.size(); i++){
         for(int bit = 0; bit < doors_num; bit++){
@@ -213,7 +213,7 @@ int main() {
         }
     }
 
-    int obs_dim = 3, state_dim = compact_map.get_node_num()*64+1;
+    int obs_dim = 3, state_dim = compact_map.get_node_num()*8+1;
     cout << "[INFO] obs_dim = " << obs_dim << ", state_dim = " << state_dim  << endl;
     vector<int> state_map(compact_map.get_node_num());
     unordered_map<int,int> inv_state_map;
@@ -250,8 +250,8 @@ int main() {
                 reward(s, act) = 0;
                 continue;
             }
-            // every node else has 64 states
-            int real_node = state_map[s/64];
+            // every node else has 8 states
+            int real_node = state_map[s/8];
             // dst node is an absorbed state
             if(real_node == 3 || real_node == 4 || real_node == 5){
                 tran_vec[act](s, s) = 1;
@@ -264,10 +264,10 @@ int main() {
                 auto header = fc_compact_map.adj_table[real_node].edge_list.begin();
                 for(int mv = 0; mv < act; mv++, header++);
                 dst_id = header->first;
-                // search for dst_id according to s%64 map
-                auto it = all_compact_map[s%64].adj_table[real_node].edge_list;
+                // search for dst_id according to s%8 map
+                auto it = all_compact_map[s%8].adj_table[real_node].edge_list;
                 if(it.find(dst_id) != it.end()){
-                    tran_vec[act](s, 64*inv_state_map[dst_id] + s%64) = 1;
+                    tran_vec[act](s, 8*inv_state_map[dst_id] + s%8) = 1;
                     reward(s, act) = -header->second;
                 }
                 else
@@ -283,8 +283,8 @@ int main() {
         }
         // p_o_s
         // s is unk_node
-        if (s != state_dim-1 && var.find(state_map[s/64]) != var.end()) {
-            if ( ( ( (s % 64) >> var[state_map[s/64]]) & 1) == 0) {
+        if (s != state_dim-1 && var.find(state_map[s/8]) != var.end()) {
+            if ( ( ( (s % 8) >> var[state_map[s/8]]) & 1) == 0) {
                 p_o_s(0, s) = 1;
                 p_o_s(1, s) = 0;
                 p_o_s(2, s) = 0;
@@ -317,54 +317,49 @@ int main() {
     }
 
 
-//    Eigen::MatrixXf alpha_vector;
-//    MATSL::read_binary("../output.bin", alpha_vector);
-//    cout << alpha_vector;
-//
-//    Eigen::VectorXf _belief_state(state_dim);
-//    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(64);
-//    node_belief_state(0) = 1;
-//
-//    cout << compact_map.get_node_num() << endl;
-//
-//    for(int i = 0; i < 26; i++){
-//        cout << state_map[i] << ": ";
-//    }
-//    cout << endl;
-//
-//    for(int node = 0; node < compact_map.get_node_num(); node++){
-//        _belief_state.setConstant(0);
-//        _belief_state.middleRows(64*node, 64) = node_belief_state;
-//
-//        Eigen::VectorXf adv_belief_state(1 + state_dim);
-//        adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-////        cout << adv_belief_state;
-////        cout << "start to calculate result" << endl;
-//        Eigen::VectorXf result = alpha_vector * adv_belief_state;
-////        cout << "start to search max_v" << endl;
-//        double max_v = result.maxCoeff();
-////        cout << "start to match the best action" << endl;
-//        vector<int> best_actions;
-//        for(int i = 0; i < alpha_vector.rows(); i++){
-//            if(abs(max_v - result(i)) < 0.01) {
-//                if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
-//                    best_actions.push_back((int)alpha_vector(i,0));
-//                }
-//            }
-//        }
-//
-//        cout << state_map[node] << ": ";
-//        for(auto act:best_actions){
-//            if(act < fc_compact_map.adj_table[state_map[node]].edge_list.size()){
-//                auto header = fc_compact_map.adj_table[state_map[node]].edge_list.begin();
-//                for(int mv = 0; mv < act; mv++, header++);
-//                cout << header->first << "; ";            }
-//            else
-//            {
-//                cout << "act: " << act << ", ?? ";
-//            }
-//        }
-//        cout << endl;
-//    }
+    Eigen::MatrixXf alpha_vector;
+    MATSL::read_binary("../output.bin", alpha_vector);
+    cout << alpha_vector;
+
+    Eigen::VectorXf _belief_state(state_dim);
+    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(8);
+    node_belief_state(0) = 1;
+
+    cout << compact_map.get_node_num() << endl;
+
+    for(int node = 0; node < compact_map.get_node_num(); node++){
+        _belief_state.setConstant(0);
+        _belief_state.middleRows(8*node, 8) = node_belief_state;
+
+        Eigen::VectorXf adv_belief_state(1 + state_dim);
+        adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
+//        cout << adv_belief_state;
+//        cout << "start to calculate result" << endl;
+        Eigen::VectorXf result = alpha_vector * adv_belief_state;
+//        cout << "start to search max_v" << endl;
+        double max_v = result.maxCoeff();
+//        cout << "start to match the best action" << endl;
+        vector<int> best_actions;
+        for(int i = 0; i < alpha_vector.rows(); i++){
+            if(abs(max_v - result(i)) < 0.01) {
+                if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
+                    best_actions.push_back((int)alpha_vector(i,0));
+                }
+            }
+        }
+
+        cout << state_map[node] << ": ";
+        for(auto act:best_actions){
+            if(act < fc_compact_map.adj_table[state_map[node]].edge_list.size()){
+                auto header = fc_compact_map.adj_table[state_map[node]].edge_list.begin();
+                for(int mv = 0; mv < act; mv++, header++);
+                cout << header->first << "; ";            }
+            else
+            {
+                cout << "act: " << act << ", ?? ";
+            }
+        }
+        cout << endl;
+    }
 
 }
