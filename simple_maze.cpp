@@ -28,6 +28,15 @@
 
 using namespace std;
 
+// return x^y
+int my_pow(const int& x, const int& y){
+    int ans = 1;
+    for(int i = 0; i < y; i++){
+        ans *= x;
+    }
+    return ans;
+}
+
 // dim: C(n,r) x r
 vector<vector<int>> generateCombinations(int n, int r) {
     vector<vector<int>> output;
@@ -119,9 +128,10 @@ int main() {
     */
 
     // unknown door
-    vector<vector<int>> unk_part{{6,7,8},
+    vector<vector<int>> unk_part{{9,10,11},{13,12,14},
                                      {16,17,15,18},{25,26,27,28}};
     const int doors_num = unk_part.size();
+    const int all_condition_num = my_pow(2, doors_num);
     cout << "[INFO] the number of unknown doors is " << doors_num << endl;
 
     unordered_map<int, int> var;
@@ -192,7 +202,7 @@ int main() {
     cout << "[INFO] act_dim is " << act_dim << endl;
 
     // all kinds of possible structure
-    vector<Map> all_compact_map(8, compact_map);
+    vector<Map> all_compact_map(all_condition_num, compact_map);
 
     for(int i = 0; i < all_compact_map.size(); i++){
         for(int bit = 0; bit < doors_num; bit++){
@@ -212,7 +222,7 @@ int main() {
         }
     }
 
-    int obs_dim = 3, state_dim = compact_map.get_node_num()*8+1;
+    int obs_dim = 3, state_dim = compact_map.get_node_num()*all_condition_num+1;
     cout << "[INFO] obs_dim = " << obs_dim << ", state_dim = " << state_dim  << endl;
     vector<int> state_map(compact_map.get_node_num());
     unordered_map<int,int> inv_state_map;
@@ -248,8 +258,8 @@ int main() {
                 reward(s, act) = 0;
                 continue;
             }
-            // every node else has 8 states
-            int real_node = state_map[s/8];
+            // every node else has all_condition_num states
+            int real_node = state_map[s/all_condition_num];
             // dst node is an absorbed state
             if(real_node == 3 || real_node == 4 || real_node == 5){
                 tran_vec[act](s, s) = 1;
@@ -262,10 +272,10 @@ int main() {
                 auto header = fc_compact_map.adj_table[real_node].edge_list.begin();
                 for(int mv = 0; mv < act; mv++, header++);
                 dst_id = header->first;
-                // search for dst_id according to s%8 map
-                auto it = all_compact_map[s%8].adj_table[real_node].edge_list;
+                // search for dst_id according to s%all_condition_num map
+                auto it = all_compact_map[s%all_condition_num].adj_table[real_node].edge_list;
                 if(it.find(dst_id) != it.end()){
-                    tran_vec[act](s, 8*inv_state_map[dst_id] + s%8) = 1;
+                    tran_vec[act](s, all_condition_num*inv_state_map[dst_id] + s%all_condition_num) = 1;
                     reward(s, act) = -header->second;
                 }
                 else
@@ -281,8 +291,8 @@ int main() {
         }
         // p_o_s
         // s is unk_node
-        if (s != state_dim-1 && var.find(state_map[s/8]) != var.end()) {
-            if ( ( ( (s % 8) >> var[state_map[s/8]]) & 1) == 0) {
+        if (s != state_dim-1 && var.find(state_map[s/all_condition_num]) != var.end()) {
+            if ( ( ( (s % all_condition_num) >> var[state_map[s/all_condition_num]]) & 1) == 0) {
                 p_o_s(0, s) = 1;
                 p_o_s(1, s) = 0;
                 p_o_s(2, s) = 0;
@@ -306,25 +316,25 @@ int main() {
     POMDP PBVI(tran_vec, reward, p_o_s);
 
     // PBVI的核心
-    int node_state_num = (int)pow(3,doors_num);
-    const int point_num = node_state_num*(state_dim-1)/8 + 1;
-    Eigen::MatrixXf possible_state(8, node_state_num);
+    int node_state_num = my_pow(3,doors_num);
+    const int point_num = node_state_num*(state_dim-1)/all_condition_num + 1;
+    Eigen::MatrixXf possible_state(all_condition_num, node_state_num);
     possible_state.setZero();
     // C(doors_num,r)
     int count = 0;
     // 生成组合数索引，重点关注对象
     for(int r = 0; r <= doors_num; r++){
         if(r == 0){
-            possible_state.col(count) = (float)pow(0.5, doors_num) * Eigen::MatrixXf::Ones(8,1);
+            possible_state.col(count) = (float)pow(0.5, doors_num) * Eigen::MatrixXf::Ones(all_condition_num,1);
             count++;
             continue;
         }
         auto C_n_r = generateCombinations(doors_num, r);
         for(auto item:C_n_r){
             // 生成匹配的掩码，重点关注对象的所有可能的情况
-            for(int mask = 0; mask < (int)pow(2,r); mask++){
+            for(int mask = 0; mask < my_pow(2,r); mask++){
                 // 标记匹配掩码的索引
-                for(unsigned int index = 0; index < 8; index++){
+                for(unsigned int index = 0; index < all_condition_num; index++){
                     // 检查index能否匹配
                     bool is_matched = true;
                     for(int bit_index = 0; bit_index < r; bit_index++){
@@ -349,10 +359,10 @@ int main() {
 //    Eigen::MatrixXf belief_point(state_dim, point_num);
     Eigen::SparseMatrix<float> belief_point(1+state_dim, point_num);
     belief_point.setZero();
-    for(int i = 0; i < (state_dim-1)/8; i++){
-//        belief_point.block(8*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
+    for(int i = 0; i < (state_dim-1)/all_condition_num; i++){
+//        belief_point.block(all_condition_num*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
         Eigen::MatrixXf belief_point_col = Eigen::MatrixXf::Zero(1+state_dim, node_state_num);
-        belief_point_col.middleRows(1+8*i, 8) = possible_state;
+        belief_point_col.middleRows(1+all_condition_num*i, all_condition_num) = possible_state;
         belief_point.middleCols(node_state_num*i, node_state_num) = belief_point_col.sparseView();
     }
     belief_point.insert(state_dim, point_num-1) = 1;
