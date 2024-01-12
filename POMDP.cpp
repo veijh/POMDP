@@ -72,6 +72,10 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
     for (int horizon = 0; horizon < horizon_len; horizon++) {
         cout << "iteration: " << horizon << endl;
         Eigen::MatrixXf new_alpha;
+        if(horizon % 500 == 499){
+            cout << "output alpha vector" << endl;
+            MATSL::write_binary("../output.bin." + to_string(horizon), alpha_vector);
+        }
 
         cout << "calculate tmp.";
         struct timeval t1{},t2{};
@@ -147,7 +151,6 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
     }
 //    cout << "alpha_vector:" << endl << alpha_vector << endl;
-    MATSL::write_binary("../output.bin", alpha_vector);
 }
 
 vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
