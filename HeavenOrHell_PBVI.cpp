@@ -49,12 +49,15 @@ int main() {
     const int total_state = 16+1;
 
     // 观测的似然
-    Eigen::Matrix2Xd p_obs_state(2, total_state);
-    p_obs_state.setConstant(0.5);
+    Eigen::MatrixXd p_obs_state(3, total_state);
+    p_obs_state.setConstant(0);
+    p_obs_state.bottomRows(1) = Eigen::RowVectorXd ::Ones(total_state);
     p_obs_state(0, 14) = 1;
     p_obs_state(1, 14) = 0;
+    p_obs_state(2, 14) = 0;
     p_obs_state(0, 15) = 0;
     p_obs_state(1, 15) = 1;
+    p_obs_state(2, 15) = 0;
 
     // 状态转移
     vector<Eigen::Matrix<double, total_state, total_state>> trans_vec;
@@ -149,7 +152,7 @@ int main() {
         for (int row = 0; row < point_num; row++) {
             tmp[row].resize(4);
             for (int action = 0; action < 4; action++) {
-                tmp[row][action].resize(2);
+                tmp[row][action].resize(3);
             }
         }
 
@@ -160,7 +163,7 @@ int main() {
             // 动作
             for (int action = 0; action < 4; action++) {
                 // 观测
-                for (int z = 0; z < 2; ++z) {
+                for (int z = 0; z < 3; ++z) {
                     // 第一列为 action
                     tmp[k][action][z](0,0) = 0;
                     tmp[k][action][z].rightCols(total_state) = (alpha_vector.row(k).rightCols(total_state).array() * p_obs_state.row(z).array()).matrix()
@@ -178,7 +181,7 @@ int main() {
             // 对于某个指定动作
             for (int action = 0; action < 4; action++) {
                 // 对于某个指定观测
-                for(int z = 0; z < 2; z++){
+                for(int z = 0; z < 3; z++){
                     // 计算V(b|z)
                     // 查找使得alpha*b最大的alpha
                     vector<double> prod_vec;

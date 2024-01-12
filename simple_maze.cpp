@@ -173,15 +173,15 @@ int main() {
         fc_compact_map.add_edge(item[size-2], item[size-1]);
     }
 
-    /*
+
     for(auto node:fc_compact_map.adj_table){
-        cout << "node " << node.first << " >> ";
+        cout << "node " << node.first << ":";
         for(auto item:node.second.edge_list){
-            cout << item.first << ": " << item.second << "; ";
+            cout << "act[" << item.first << "]:" << item.second << "; ";
         }
         cout << endl;
     }
-    */
+
 
     int act_dim = 0;
     for(auto item:fc_compact_map.adj_table){
@@ -281,7 +281,7 @@ int main() {
         }
         // p_o_s
         // s is unk_node
-        if (var.find(state_map[s/64]) != var.end()) {
+        if (s != state_dim-1 && var.find(state_map[s/64]) != var.end()) {
             if ( ( ( (s % 64) >> var[state_map[s/64]]) & 1) == 0) {
                 p_o_s(0, s) = 1;
                 p_o_s(1, s) = 0;

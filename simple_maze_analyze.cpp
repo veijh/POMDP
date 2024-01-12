@@ -25,6 +25,7 @@
 #include "POMDP.h"
 #include "single_UAV_maze.h"
 #include "maze_map.h"
+#include "string"
 
 using namespace std;
 
@@ -173,15 +174,15 @@ int main() {
         fc_compact_map.add_edge(item[size-2], item[size-1]);
     }
 
-    /*
     for(auto node:fc_compact_map.adj_table){
-        cout << "node " << node.first << " >> ";
+        cout << "node " << node.first << ": ";
+        int count = 0;
         for(auto item:node.second.edge_list){
-            cout << item.first << ": " << item.second << "; ";
+            cout << "act[" << count << "]:" << item.first << "; ";
+            count++;
         }
         cout << endl;
     }
-    */
 
     int act_dim = 0;
     for(auto item:fc_compact_map.adj_table){
@@ -223,9 +224,10 @@ int main() {
         inv_state_map[header->first] = i;
     }
 
-//    for(auto item:state_map){
-//        cout << item << ", ";
-//    }
+    for(auto item:state_map){
+        cout << item << ", ";
+    }
+    cout << endl;
 
 //    for(auto item:inv_state_map){
 //        cout << item.first << ", " << item.second << endl;
@@ -281,7 +283,7 @@ int main() {
         }
         // p_o_s
         // s is unk_node
-        if (var.find(state_map[s/64]) != var.end()) {
+        if (s != state_dim-1 && var.find(state_map[s/64]) != var.end()) {
             if ( ( ( (s % 64) >> var[state_map[s/64]]) & 1) == 0) {
                 p_o_s(0, s) = 1;
                 p_o_s(1, s) = 0;
@@ -301,53 +303,68 @@ int main() {
         }
     }
 
-    Eigen::MatrixXf alpha_vector;
-    MATSL::read_binary("../output.bin", alpha_vector);
+//    ofstream file("p_o_s.csv");
+//    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+//    file << p_o_s.format(CSVFormat);
+//    ofstream file("r_s_a.csv");
+//    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+//    file << reward.format(CSVFormat);
 
-    Eigen::VectorXf _belief_state(state_dim);
-    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(64);
-    node_belief_state(0) = 1;
-
-    cout << compact_map.get_node_num() << endl;
-
-    for(int i = 0; i < 26; i++){
-        cout << state_map[i] << ": ";
+    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+    for(int i = 0; i < tran_vec.size(); i++){
+        ofstream file("tran_" + to_string(i) + ".csv");
+        file << tran_vec[i].format(CSVFormat);
     }
-    cout << endl;
 
-    for(int node = 0; node < compact_map.get_node_num(); node++){
-        _belief_state.setConstant(0);
-        _belief_state.middleRows(64*node, 64) = node_belief_state;
 
-        Eigen::VectorXf adv_belief_state(1 + state_dim);
-        adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-//        cout << adv_belief_state;
-//        cout << "start to calculate result" << endl;
-        Eigen::VectorXf result = alpha_vector * adv_belief_state;
-//        cout << "start to search max_v" << endl;
-        double max_v = result.maxCoeff();
-//        cout << "start to match the best action" << endl;
-        vector<int> best_actions;
-        for(int i = 0; i < alpha_vector.rows(); i++){
-            if(abs(max_v - result(i)) < 0.01) {
-                if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
-                    best_actions.push_back((int)alpha_vector(i,0));
-                }
-            }
-        }
-
-        cout << state_map[node] << ": ";
-        for(auto act:best_actions){
-            if(act < fc_compact_map.adj_table[state_map[node]].edge_list.size()){
-                auto header = fc_compact_map.adj_table[state_map[node]].edge_list.begin();
-                for(int mv = 0; mv < act; mv++, header++);
-                cout << header->first << "; ";            }
-            else
-            {
-                cout << "act: " << act << ", ?? ";
-            }
-        }
-        cout << endl;
-    }
+//    Eigen::MatrixXf alpha_vector;
+//    MATSL::read_binary("../output.bin", alpha_vector);
+//    cout << alpha_vector;
+//
+//    Eigen::VectorXf _belief_state(state_dim);
+//    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(64);
+//    node_belief_state(0) = 1;
+//
+//    cout << compact_map.get_node_num() << endl;
+//
+//    for(int i = 0; i < 26; i++){
+//        cout << state_map[i] << ": ";
+//    }
+//    cout << endl;
+//
+//    for(int node = 0; node < compact_map.get_node_num(); node++){
+//        _belief_state.setConstant(0);
+//        _belief_state.middleRows(64*node, 64) = node_belief_state;
+//
+//        Eigen::VectorXf adv_belief_state(1 + state_dim);
+//        adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
+////        cout << adv_belief_state;
+////        cout << "start to calculate result" << endl;
+//        Eigen::VectorXf result = alpha_vector * adv_belief_state;
+////        cout << "start to search max_v" << endl;
+//        double max_v = result.maxCoeff();
+////        cout << "start to match the best action" << endl;
+//        vector<int> best_actions;
+//        for(int i = 0; i < alpha_vector.rows(); i++){
+//            if(abs(max_v - result(i)) < 0.01) {
+//                if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
+//                    best_actions.push_back((int)alpha_vector(i,0));
+//                }
+//            }
+//        }
+//
+//        cout << state_map[node] << ": ";
+//        for(auto act:best_actions){
+//            if(act < fc_compact_map.adj_table[state_map[node]].edge_list.size()){
+//                auto header = fc_compact_map.adj_table[state_map[node]].edge_list.begin();
+//                for(int mv = 0; mv < act; mv++, header++);
+//                cout << header->first << "; ";            }
+//            else
+//            {
+//                cout << "act: " << act << ", ?? ";
+//            }
+//        }
+//        cout << endl;
+//    }
 
 }
