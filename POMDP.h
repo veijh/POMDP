@@ -19,6 +19,7 @@
 #include "cstdlib"
 #include <sys/time.h>
 #include <zlib.h>
+#include "fstream"
 
 #define EPS (1e-5)
 
@@ -59,6 +60,7 @@ public:
 };
 
 namespace MATSL{
+    /*
     template<class Derived>
     void write_binary(const std::string &filename,
                       const Eigen::PlainObjectBase<Derived> &matrix)
@@ -90,6 +92,28 @@ namespace MATSL{
         gzread(in, (char*) matrix.data(), rows*cols*sizeof(Scalar) );
         gzclose(in);
     }
+    */
+
+    template<class Matrix>
+    void write_binary(const char* filename, const Matrix& matrix){
+        std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
+        typename Matrix::Index rows=matrix.rows(), cols=matrix.cols();
+        out.write((char*) (&rows), sizeof(typename Matrix::Index));
+        out.write((char*) (&cols), sizeof(typename Matrix::Index));
+        out.write((char*) matrix.data(), rows*cols*sizeof(typename Matrix::Scalar) );
+        out.close();
+    }
+    template<class Matrix>
+    void read_binary(const char* filename, Matrix& matrix){
+        std::ifstream in(filename, std::ios::in | std::ios::binary);
+        typename Matrix::Index rows=0, cols=0;
+        in.read((char*) (&rows),sizeof(typename Matrix::Index));
+        in.read((char*) (&cols),sizeof(typename Matrix::Index));
+        matrix.resize(rows, cols);
+        in.read( (char *) matrix.data() , rows*cols*sizeof(typename Matrix::Scalar) );
+        in.close();
+    }
+
 } // MATSL::
 
 #endif //CPP_TEST_POMDP_H
