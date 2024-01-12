@@ -72,7 +72,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
     for (int horizon = 0; horizon < horizon_len; horizon++) {
         cout << "iteration: " << horizon << endl;
         Eigen::MatrixXf new_alpha;
-        if(horizon % 500 == 499){
+        if(horizon % 10 == 9){
             cout << "output alpha vector" << endl;
             MATSL::write_binary("../output.bin." + to_string(horizon), alpha_vector);
         }

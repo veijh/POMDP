@@ -368,6 +368,6 @@ int main() {
     belief_point.insert(state_dim, point_num-1) = 1;
     belief_point.makeCompressed();
 
-    PBVI.PBVI(belief_point, 5000);
+    PBVI.PBVI(belief_point, 200);
 
 }
