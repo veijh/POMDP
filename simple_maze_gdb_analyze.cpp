@@ -331,13 +331,13 @@ int main() {
 
 
     Eigen::MatrixXf alpha_vector;
-    MATSL::read_binary("../output.bin.9", alpha_vector);
+    MATSL::read_binary("../output.bin.19", alpha_vector);
     cout << alpha_vector << endl;
 
     Eigen::VectorXf _belief_state(state_dim);
 //    Eigen::VectorXf node_belief_state = pow(0.5, doors_num)*Eigen::VectorXf::Ones(all_condition_num);
     Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(all_condition_num);
-    node_belief_state(0) = 1;
+    node_belief_state(1) = 1;
     cout << node_belief_state << endl;
 
     cout << compact_map.get_node_num() << endl;
@@ -377,5 +377,4 @@ int main() {
         }
         cout << endl;
     }
-
 }

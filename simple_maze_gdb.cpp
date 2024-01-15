@@ -280,7 +280,7 @@ int main() {
                 if(it.find(dst_id) != it.end()){
                     tran_vec[act](s, all_condition_num*inv_state_map[dst_id] + s%all_condition_num) = 1;
                     if(real_node == dst_id){
-                        reward(s, act) = -0.1;
+                        reward(s, act) = -0.5;
                     }
                     else{
                         reward(s, act) = -header->second;
@@ -372,6 +372,7 @@ int main() {
             }
         }
     }
+    cout << possible_state << endl;
 
     // 信念点的集合 N x point_num
 //    Eigen::MatrixXf belief_point(state_dim, point_num);
@@ -384,7 +385,8 @@ int main() {
         belief_point.middleCols(node_state_num*i, node_state_num) = belief_point_col.sparseView();
     }
     belief_point.insert(state_dim, point_num-1) = 1;
+    cout << Eigen::MatrixXf(belief_point) << endl;
     belief_point.makeCompressed();
 
-    PBVI.PBVI(belief_point, 100);
+    PBVI.PBVI(belief_point, 20);
 }

@@ -137,19 +137,25 @@ int main() {
             0, 1, 0.5;
     int active_num = 0;
     // 信念点的集合 N x point_num
-    Eigen::MatrixXf belief_point(total_state, point_num);
+    Eigen::MatrixXf belief_point(total_state+1, point_num);
     belief_point.setConstant(0);
     for(int i = 0; i < total_state/2; i++){
-        belief_point.block(2*i,3*i,2,3) = possible_state;
+        belief_point.block(2*i+1,3*i,2,3) = possible_state;
     }
+
+    cout << p_obs_state << endl << endl;
+    for(auto item:trans_vec){
+        cout << item << endl << endl;
+    }
+    cout << belief_point << endl << endl;
 
     // 初始化与求解
     POMDP PBVI(trans_vec, reward, p_obs_state);
-    PBVI.PBVI(belief_point, 10);
+    PBVI.PBVI(belief_point.sparseView(), 10);
 
     vector<vector<int>> policy;
     for(int s = 0; s < total_state/2; s++){
-        Eigen::VectorXd belief(total_state);
+        Eigen::VectorXf belief(total_state);
         belief.setConstant(0);
         belief(2*s) = 0.5;
         belief(2*s+1) = 0.5;

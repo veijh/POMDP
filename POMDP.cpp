@@ -47,6 +47,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 //    gettimeofday(&t1,nullptr);
 //    belief_points = augmented_belief.sparseView();
     belief_points = _belief_points;
+    cout << Eigen::MatrixXf(belief_points) << endl;
 //    gettimeofday(&t2,nullptr);
 //    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
 //    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
@@ -84,7 +85,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         // 这一段可以并行计算
         // tmp一共有points_num * action * observation 个元素
         // belief数量
-        #pragma omp parallel for num_threads(24)
+//        #pragma omp parallel for num_threads(24)
         for (int k = 0; k < points_num; k++) {
             // 动作
             for (int action = 0; action < act_dim; action++) {
@@ -117,7 +118,8 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         new_alpha.conservativeResize(act_dim * points_num, 1 + state_dim);
         new_alpha.setConstant(0);
 
-        #pragma omp parallel for num_threads(24)
+//        #pragma omp parallel for num_threads(24)
+        // 计算 new alpha
         // belief点
         for(int k = 0; k < points_num; k++){
             // 对于某个指定动作
@@ -125,8 +127,8 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                 // 对于某个指定观测
                 for(int z = 0; z < obs_dim; z++){
                     // 计算V(b|z)
-                    // 查找使得alpha*b最大的alpha. prod: 1x(1+S)x(1+S)xN = 1xN
-                    Eigen::RowVectorXf prod = tmp[action][z].row(k) * belief_points;
+                    // 查找使得alpha*b最大的alpha. prod: Nx(1+S)x(1+S)x1 = Nx1
+                    Eigen::VectorXf prod = tmp[action][z] * belief_points.col(k);
                     int index = 0;
                     prod.maxCoeff(&index);
 
@@ -139,16 +141,17 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
                 // 状态
                 new_alpha.block(action + act_dim*k, 1, 1, state_dim) += rwd_s_a.col(action).transpose();
             }
-
-            // 从action中选择最优动作，更新alpha_vector
+            // 从new_alpha的action中选择最优动作，更新alpha_vector
             int best_action = 0;
-            Eigen::VectorXf result = new_alpha.block(act_dim*k, 0, act_dim, 1+state_dim) * belief_points.col(k);
+            Eigen::VectorXf result = new_alpha.block(act_dim * k, 0, act_dim, 1 + state_dim) * belief_points.col(k);
             result.maxCoeff(&best_action);
-            alpha_vector.row(k) = new_alpha.row(best_action + act_dim*k);
+            alpha_vector.row(k) = new_alpha.row(best_action + act_dim * k);
         }
+
         gettimeofday(&t2,nullptr);
         timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
         cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
+//        cout << "alpha_vector:" << endl << alpha_vector << endl;
     }
 //    cout << "alpha_vector:" << endl << alpha_vector << endl;
 }
