@@ -47,7 +47,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 //    gettimeofday(&t1,nullptr);
 //    belief_points = augmented_belief.sparseView();
     belief_points = _belief_points;
-    cout << Eigen::MatrixXf(belief_points) << endl;
+//    cout << Eigen::MatrixXf(belief_points) << endl;
 //    gettimeofday(&t2,nullptr);
 //    timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
 //    cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
