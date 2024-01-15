@@ -327,8 +327,8 @@ int main() {
 
 
     Eigen::MatrixXf alpha_vector;
-    MATSL::read_binary("../output.bin.19", alpha_vector);
-    cout << alpha_vector << endl;
+    MATSL::read_binary("../output.bin.39", alpha_vector);
+//    cout << alpha_vector << endl;
 
     Eigen::VectorXf _belief_state(state_dim);
     Eigen::VectorXf node_belief_state = pow(0.5, doors_num)*Eigen::VectorXf::Ones(all_condition_num);
@@ -343,16 +343,17 @@ int main() {
         _belief_state.middleRows(all_condition_num*node, all_condition_num) = node_belief_state;
 
         Eigen::VectorXf adv_belief_state(1 + state_dim);
+        adv_belief_state.setConstant(0);
         adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
 //        cout << adv_belief_state;
 //        cout << "start to calculate result" << endl;
         Eigen::VectorXf result = alpha_vector * adv_belief_state;
 //        cout << "start to search max_v" << endl;
-        double max_v = result.maxCoeff();
+        float max_v = result.maxCoeff();
 //        cout << "start to match the best action" << endl;
         vector<int> best_actions;
         for(int i = 0; i < alpha_vector.rows(); i++){
-            if(abs(max_v - result(i)) < 0.01) {
+            if(abs(max_v - result(i)) < 0.001) {
                 if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
                     best_actions.push_back((int)alpha_vector(i,0));
                 }
