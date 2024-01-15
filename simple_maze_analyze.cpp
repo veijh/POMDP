@@ -23,7 +23,6 @@
 #include "Eigen/Sparse"
 #include "unordered_map"
 #include "POMDP.h"
-#include "single_UAV_maze.h"
 #include "maze_map.h"
 #include "string"
 
@@ -86,7 +85,7 @@ int main() {
 #else
     cout << "not support openmp" << endl;
 #endif
-    omp_set_num_threads(6);
+//    omp_set_num_threads(6);
 
     // read topo from file
     FILE* node_file = fopen("../node.csv", "r");
@@ -129,7 +128,7 @@ int main() {
     */
 
     // unknown door
-    vector<vector<int>> unk_part{{13,12,14},
+    vector<vector<int>> unk_part{{6,7,8},{13,12,14},
                                  {16,17,15,18},{25,26,27,28}};
     const int doors_num = unk_part.size();
     const int all_condition_num = my_pow(2, doors_num);
@@ -328,14 +327,14 @@ int main() {
 
 
     Eigen::MatrixXf alpha_vector;
-    MATSL::read_binary("../output.bin.199", alpha_vector);
+    MATSL::read_binary("../output.bin.19", alpha_vector);
     cout << alpha_vector << endl;
 
     Eigen::VectorXf _belief_state(state_dim);
-//    Eigen::VectorXf node_belief_state = pow(0.5, doors_num)*Eigen::VectorXf::Ones(all_condition_num);
-    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(all_condition_num);
-    node_belief_state(0) = 1;
-//    cout << node_belief_state << endl;
+    Eigen::VectorXf node_belief_state = pow(0.5, doors_num)*Eigen::VectorXf::Ones(all_condition_num);
+//    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(all_condition_num);
+//    node_belief_state(0) = 1;
+    cout << node_belief_state << endl;
 
     cout << compact_map.get_node_num() << endl;
 

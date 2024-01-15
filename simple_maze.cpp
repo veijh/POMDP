@@ -23,7 +23,6 @@
 #include "Eigen/Sparse"
 #include "unordered_map"
 #include "POMDP.h"
-#include "single_UAV_maze.h"
 #include "maze_map.h"
 
 using namespace std;
@@ -128,7 +127,7 @@ int main() {
     */
 
     // unknown door
-    vector<vector<int>> unk_part{{13,12,14},
+    vector<vector<int>> unk_part{{6,7,8},{13,12,14},
                                      {16,17,15,18},{25,26,27,28}};
     const int doors_num = unk_part.size();
     const int all_condition_num = my_pow(2, doors_num);
