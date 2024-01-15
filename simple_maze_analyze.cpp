@@ -128,7 +128,7 @@ int main() {
     */
 
     // unknown door
-    vector<vector<int>> unk_part{{6,7,8},{9,10,11},{13,12,14},
+    vector<vector<int>> unk_part{{6,7,8},{9,10,11},{13,12,14},{33,35,34},
                                  {16,17,15,18},{25,26,27,28}};
     const int doors_num = unk_part.size();
     const int all_condition_num = my_pow(2, doors_num);
@@ -327,7 +327,7 @@ int main() {
 
 
     Eigen::MatrixXf alpha_vector;
-    MATSL::read_binary("../output.bin.39", alpha_vector);
+    MATSL::read_binary("../6door/output.bin.39", alpha_vector);
 //    cout << alpha_vector << endl;
 
     Eigen::VectorXf _belief_state(state_dim);
