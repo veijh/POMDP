@@ -85,7 +85,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         // 这一段可以并行计算
         // tmp一共有points_num * action * observation 个元素
         // belief数量
-        #pragma omp parallel for num_threads(32)
+        #pragma omp parallel for num_threads(24)
         for (int k = 0; k < points_num; k++) {
             // 动作
             for (int action = 0; action < act_dim; action++) {
@@ -118,7 +118,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         new_alpha.conservativeResize(act_dim * points_num, 1 + state_dim);
         new_alpha.setConstant(0);
 
-        #pragma omp parallel for num_threads(32)
+        #pragma omp parallel for num_threads(24)
         // 计算 new alpha
         // belief点
         for(int k = 0; k < points_num; k++){
@@ -151,7 +151,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         gettimeofday(&t2,nullptr);
         timeuse = (t2.tv_sec - t1.tv_sec) + (double)(t2.tv_usec - t1.tv_usec)/1000000.0;
         cout<<" using time = " << timeuse << " s" << endl;  //(in sec)
-        cout << "alpha_vector:" << endl << alpha_vector << endl;
+//        cout << "alpha_vector:" << endl << alpha_vector << endl;
     }
 //    cout << "alpha_vector:" << endl << alpha_vector << endl;
 }
