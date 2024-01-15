@@ -85,7 +85,7 @@ int main() {
 #else
     cout << "not support openmp" << endl;
 #endif
-    omp_set_num_threads(6);
+//    omp_set_num_threads(6);
 
     // read topo from file
     FILE* node_file = fopen("../node.csv", "r");

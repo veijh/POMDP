@@ -10,9 +10,9 @@
 #define EIGEN_VECTORIZE_SSE4_2
 #endif
 
-#define CRASH_REWARD (-99)
+#define CRASH_REWARD (-999)
 
-#pragma GCC optimize(3)
+//#pragma GCC optimize(3)
 
 #include "iostream"
 #include <iomanip>
@@ -22,9 +22,10 @@
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
 #include "unordered_map"
-#include "POMDP.h"
+#include "../POMDP.h"
 #include "single_UAV_maze.h"
-#include "maze_map.h"
+#include "../maze_map.h"
+#include "string"
 
 using namespace std;
 
@@ -156,13 +157,9 @@ int main() {
     vector<int> path;
     for(int begin:key_node){
         for (int end:key_node){
-//            if(end == begin) continue;
+            if(end == begin) continue;
             double dis = map.dijkstra(begin, {end}, path);
             if(path.size() != 0){
-                if(begin == 1 && end == 2) continue;
-                if(begin == 2 && end == 1) continue;
-                if(begin == 3 && end == 4) continue;
-                if(begin == 4 && end == 3) continue;
                 compact_map.add_edge(begin, end, dis);
             }
         }
@@ -186,15 +183,15 @@ int main() {
         fc_compact_map.add_edge(item[size-2], item[size-1]);
     }
 
-
     for(auto node:fc_compact_map.adj_table){
-        cout << "node " << node.first << ":";
+        cout << "node " << node.first << ": ";
+        int count = 0;
         for(auto item:node.second.edge_list){
-            cout << "act[" << item.first << "]:" << item.second << "; ";
+            cout << "act[" << count << "]:" << item.first << "; ";
+            count++;
         }
         cout << endl;
     }
-
 
     int act_dim = 0;
     for(auto item:fc_compact_map.adj_table){
@@ -236,9 +233,10 @@ int main() {
         inv_state_map[header->first] = i;
     }
 
-//    for(auto item:state_map){
-//        cout << item << ", ";
-//    }
+    for(auto item:state_map){
+        cout << item << ", ";
+    }
+    cout << endl;
 
 //    for(auto item:inv_state_map){
 //        cout << item.first << ", " << item.second << endl;
@@ -279,12 +277,7 @@ int main() {
                 auto it = all_compact_map[s%all_condition_num].adj_table[real_node].edge_list;
                 if(it.find(dst_id) != it.end()){
                     tran_vec[act](s, all_condition_num*inv_state_map[dst_id] + s%all_condition_num) = 1;
-                    if(real_node == dst_id){
-                        reward(s, act) = -0.5;
-                    }
-                    else{
-                        reward(s, act) = -header->second;
-                    }
+                    reward(s, act) = -header->second;
                 }
                 else
                 {
@@ -319,74 +312,65 @@ int main() {
         }
     }
 
-    // init
-    cout << "[LOG] start to init POMDP" << endl;
-    POMDP PBVI(tran_vec, reward, p_o_s);
+//    ofstream file("p_o_s.csv");
+//    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+//    file << p_o_s.format(CSVFormat);
+//    ofstream file("r_s_a.csv");
+//    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+//    file << reward.format(CSVFormat);
 
-    for(auto item:state_map) {
-        cout << item;
-    }
-    cout << endl << endl;
-    for(auto item:tran_vec){
-        cout << item << endl << endl;
-    }
-    cout << reward << endl << endl;
-    cout << p_o_s << endl << endl;
+//    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
+//    for(int i = 0; i < tran_vec.size(); i++){
+//        ofstream file("tran_" + to_string(i) + ".csv");
+//        file << tran_vec[i].format(CSVFormat);
+//    }
 
-    // PBVI的核心
-    int node_state_num = my_pow(3,doors_num);
-    const int point_num = node_state_num*(state_dim-1)/all_condition_num + 1;
-    Eigen::MatrixXf possible_state(all_condition_num, node_state_num);
-    possible_state.setZero();
-    // C(doors_num,r)
-    int count = 0;
-    // 生成组合数索引，重点关注对象
-    for(int r = 0; r <= doors_num; r++){
-        if(r == 0){
-            possible_state.col(count) = (float)pow(0.5, doors_num) * Eigen::MatrixXf::Ones(all_condition_num,1);
-            count++;
-            continue;
-        }
-        auto C_n_r = generateCombinations(doors_num, r);
-        for(auto item:C_n_r){
-            // 生成匹配的掩码，重点关注对象的所有可能的情况
-            for(int mask = 0; mask < my_pow(2,r); mask++){
-                // 标记匹配掩码的索引
-                for(unsigned int index = 0; index < all_condition_num; index++){
-                    // 检查index能否匹配
-                    bool is_matched = true;
-                    for(int bit_index = 0; bit_index < r; bit_index++){
-                        unsigned int bit = 0;
-                        bit = get_bit(mask, bit_index);
-                        if(bit != get_bit(index, item[bit_index])){
-                            is_matched = false;
-                            break;
-                        }
-                    }
-                    // index如果能匹配，对应概率为1/2^(doors_num-r)
-                    if(is_matched) {
-                        possible_state(index, count) = (float)pow(0.5, doors_num-r);
-                    }
+
+    Eigen::MatrixXf alpha_vector;
+    MATSL::read_binary("../output.bin.19", alpha_vector);
+    cout << alpha_vector << endl;
+
+    Eigen::VectorXf _belief_state(state_dim);
+    Eigen::VectorXf node_belief_state = pow(0.5, doors_num)*Eigen::VectorXf::Ones(all_condition_num);
+//    Eigen::VectorXf node_belief_state = Eigen::VectorXf::Zero(all_condition_num);
+//    node_belief_state(0) = 1;
+    cout << node_belief_state << endl;
+
+    cout << compact_map.get_node_num() << endl;
+
+    for(int node = 0; node < compact_map.get_node_num(); node++){
+        _belief_state.setConstant(0);
+        _belief_state.middleRows(all_condition_num*node, all_condition_num) = node_belief_state;
+
+        Eigen::VectorXf adv_belief_state(1 + state_dim);
+        adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
+//        cout << adv_belief_state;
+//        cout << "start to calculate result" << endl;
+        Eigen::VectorXf result = alpha_vector * adv_belief_state;
+//        cout << "start to search max_v" << endl;
+        double max_v = result.maxCoeff();
+//        cout << "start to match the best action" << endl;
+        vector<int> best_actions;
+        for(int i = 0; i < alpha_vector.rows(); i++){
+            if(abs(max_v - result(i)) < 0.01) {
+                if (find(best_actions.begin(), best_actions.end(),(int)alpha_vector(i,0)) == best_actions.end()) {
+                    best_actions.push_back((int)alpha_vector(i,0));
                 }
-                count++;
             }
         }
-    }
-    cout << possible_state << endl;
 
-    // 信念点的集合 N x point_num
-//    Eigen::MatrixXf belief_point(state_dim, point_num);
-    Eigen::SparseMatrix<float> belief_point(1+state_dim, point_num);
-    belief_point.setZero();
-    for(int i = 0; i < (state_dim-1)/all_condition_num; i++){
-//        belief_point.block(all_condition_num*i,node_state_num*i,possible_state.rows(),possible_state.cols()) = possible_state;
-        Eigen::MatrixXf belief_point_col = Eigen::MatrixXf::Zero(1+state_dim, node_state_num);
-        belief_point_col.middleRows(1+all_condition_num*i, all_condition_num) = possible_state;
-        belief_point.middleCols(node_state_num*i, node_state_num) = belief_point_col.sparseView();
+        cout << state_map[node] << ": ";
+        for(auto act:best_actions){
+            if(act < fc_compact_map.adj_table[state_map[node]].edge_list.size()){
+                auto header = fc_compact_map.adj_table[state_map[node]].edge_list.begin();
+                for(int mv = 0; mv < act; mv++, header++);
+                cout << header->first << "; ";
+            }
+            else
+            {
+                cout << "act: " << act << ", ?? ";
+            }
+        }
+        cout << endl;
     }
-    belief_point.insert(state_dim, point_num-1) = 1;
-    cout << Eigen::MatrixXf(belief_point) << endl;
-    belief_point.makeCompressed();
-
-    PBVI.PBVI(belief_point, 20);
 }

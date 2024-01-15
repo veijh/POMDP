@@ -25,7 +25,6 @@
 #include "Eigen/Sparse"
 #include "unordered_map"
 #include "POMDP.h"
-#include "single_UAV_analyze.h"
 #include "cmath"
 
 typedef struct Node {

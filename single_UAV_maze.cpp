@@ -23,7 +23,6 @@
 #include "Eigen/Sparse"
 #include "unordered_map"
 #include "POMDP.h"
-#include "single_UAV_maze.h"
 
 typedef struct Node {
     int id;
