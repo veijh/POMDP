@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(cpp_test)
+project(POMDP)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
@@ -19,11 +19,23 @@ find_package(MKL CONFIG REQUIRED PATHS $ENV{MKLROOT})
 message(STATUS "Imported oneMKL targets: ${MKL_IMPORTED_TARGETS}")
 include_directories(${MKL_INCLUDE_DIR})
 
+find_package(CUDA REQUIRED)
 
 file (GLOB files *.cpp)
 foreach (file ${files})
     string(REGEX REPLACE ".+/(.+)\\..*" "\\1" exe ${file})
-    add_executable (${exe} ${file} POMDP.cpp maze_map.cpp)
+    add_executable (${exe} ${file} POMDP.cpp maze_map.cpp cudamatrix.cc cudapipeline.cc)
     message (\ \ \ \ --\ src/${exe}.cpp\ will\ be\ compiled\ to\ bin/${exe})
-    target_link_libraries(${exe} PUBLIC $<LINK_ONLY:MKL::MKL> z)
+    target_include_directories(${exe}
+            PUBLIC
+            ${PROJECT_SOURCE_DIR}/include
+            ${CUDA_INCLUDE_DIRS}
+    )
+    target_link_libraries(${exe}
+            PUBLIC
+            $<LINK_ONLY:MKL::MKL>
+            z
+            ${CUDA_LIBRARIES}
+            ${CUDA_CUBLAS_LIBRARIES}
+    )
 endforeach ()

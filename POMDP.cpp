@@ -119,7 +119,7 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
         new_alpha.setConstant(0);
 
         #pragma omp parallel for num_threads(24)
-        // 计算 new alpha
+        // 计算 new alpha, 该段计算时间远大于tmp的计算，当前瓶颈在cpu核心数，考虑迁移到gpu下cuda计算
         // belief点
         for(int k = 0; k < points_num; k++){
             // 对于某个指定动作
