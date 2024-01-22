@@ -399,22 +399,22 @@ int main() {
                 // select action
 //                cout << "select action..." << endl;
                 vector<int> actions = PBVI.select_action(belief);
+                int next_best_node = -1;
                 if(actions.empty()){
                     cout << "[ERROR] no valid action" << endl;
                     return 1;
                 }
-                int next_best_node = -1;
-                if(actions.size() > 1){
-                    cout << "[WARNING] action num more than once: ";
-                    float next_min_dis = 999.0;
+                else{
+//                    cout << "[WARNING] action num more than once: ";
+                    float next_min_dis = -999.0;
                     for(int& item:actions){
                         if(item < fc_compact_map.adj_table[cur_node].edge_list.size()){
                             auto header = fc_compact_map.adj_table[cur_node].edge_list.begin();
                             for(int mv = 0; mv < item; mv++, header++);
-                            cout << "to node " << header->first << "; ";
-                            if(reward(true_state, item) < next_min_dis){
+                            cout << "to node " << header->first << ": " << reward(true_state, item) << "m; ";
+                            if(reward(true_state, item) > next_min_dis){
                                 next_min_dis = reward(true_state, item);
-                                next_best_node = header->first;
+                                next_best_node = item;
                             }
                         }
                     }
