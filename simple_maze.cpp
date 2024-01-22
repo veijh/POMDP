@@ -275,7 +275,7 @@ int main() {
                 auto it = all_compact_map[s%all_condition_num].adj_table[real_node].edge_list;
                 if(it.find(dst_id) != it.end()){
                     tran_vec[act](s, all_condition_num*inv_state_map[dst_id] + s%all_condition_num) = 1;
-                    reward(s, act) = -header->second;
+                    reward(s, act) = (float)-it[dst_id];
                 }
                 else
                 {
