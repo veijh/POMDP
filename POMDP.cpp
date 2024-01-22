@@ -156,11 +156,12 @@ void POMDP::PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len) {
 //    cout << "alpha_vector:" << endl << alpha_vector << endl;
 }
 
-vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
-    Eigen::VectorXf adv_belief_state(1 + state_dim);
+vector<int> POMDP::select_action(const Eigen::VectorXf& _belief_state) {
+    Eigen::VectorXf adv_belief_state = Eigen::VectorXf::Zero(1 + state_dim);
     adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-    Eigen::VectorXf result = alpha_vector * adv_belief_state;
-    double max_v = result.maxCoeff();
+    Eigen::SparseMatrix<float> sparse = adv_belief_state.sparseView();
+    Eigen::VectorXf result = alpha_vector * sparse;
+    float max_v = result.maxCoeff();
     vector<int> best_actions;
     for(int i = 0; i < alpha_vector.rows(); i++){
         if(abs(max_v - result(i)) < EPS) {
@@ -172,10 +173,16 @@ vector<int> POMDP::select_action(Eigen::VectorXf _belief_state) {
     return best_actions;
 }
 
-Eigen::VectorXf POMDP::bayesian_filter(Eigen::VectorXf _belief_state, int _obs) {
-    Eigen::VectorXf adv_belief_state(1 + state_dim);
-    adv_belief_state.block(1, 0, state_dim, 1) = _belief_state;
-    Eigen::VectorXf new_belief = p_obs_in_s.row(_obs).transpose().cwiseProduct(adv_belief_state);// (p_obs_in_s.row(_obs).transpose().array() * adv_belief_state.array()).matrix();
+Eigen::VectorXf POMDP::bayesian_filter(const Eigen::VectorXf& _belief_state, int _obs) {
+    Eigen::VectorXf new_belief = p_obs_in_s.row(_obs).transpose().cwiseProduct(_belief_state);// (p_obs_in_s.row(_obs).transpose().array() * adv_belief_state.array()).matrix();
+    if(new_belief.sum() < EPS){
+        cout << "[ERROR] no possible state" << endl;
+        return new_belief;
+    }
     new_belief /= new_belief.sum();
-    return adv_belief_state.block(1, 0, state_dim, 1);
+    return new_belief;
+}
+
+void POMDP::import_alpha(const Eigen::MatrixXf &alpha_mat) {
+    alpha_vector = alpha_mat;
 }

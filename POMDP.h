@@ -21,7 +21,7 @@
 #include <zlib.h>
 #include "fstream"
 
-#define EPS (1e-5)
+#define EPS (1e-3)
 
 using namespace std;
 
@@ -54,9 +54,11 @@ public:
     // use PBVI to solve POMDP, _belief_points: SxN
     void PBVI(Eigen::SparseMatrix<float> _belief_points, int horizon_len);
     // select best actions according to belief state, _belief_points: SxN
-    vector<int> select_action(Eigen::VectorXf _belief_state);
+    vector<int> select_action(const Eigen::VectorXf& _belief_state);
     // use bayesian inference to update the belief state, belief: Sx1
-    Eigen::VectorXf bayesian_filter(Eigen::VectorXf _belief_state, int _obs);
+    Eigen::VectorXf bayesian_filter(const Eigen::VectorXf& _belief_state, int _obs);
+    // import alpha_vector
+    void import_alpha(const Eigen::MatrixXf& alpha_mat);
 };
 
 namespace MATSL{

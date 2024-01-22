@@ -146,7 +146,6 @@ double Map::dijkstra(const int &src_id, const vector<int> &dst_id, vector<int> &
             min_dst_dis = min_distance2node.at(id);
         }
     }
-    cout << src_id << " to " << min_dst_id << ":";
     int id = min_dst_id;
     if(min_dst_id == src_id){
         path.push_back(src_id);
@@ -155,20 +154,32 @@ double Map::dijkstra(const int &src_id, const vector<int> &dst_id, vector<int> &
     }
     id = path2node.at(id);
     if (id == -1) {
+#ifdef DBG
+        cout << src_id << " to " << min_dst_id << ":";
         cout << "no path" << endl;
+#endif
         return -1.0;
     } else {
+#ifdef DBG
+        cout << src_id << " to " << min_dst_id << ":";
+#endif
         path.push_back(min_dst_id);
         path.push_back(id);
+#ifdef DBG
         cout << "<-" << id;
+#endif
         while (id != src_id) {
             id = path2node.at(id);
             path.push_back(id);
+#ifdef DBG
             cout << "<-" << id;
+#endif
         }
         reverse(path.begin(), path.end());
     }
+#ifdef DBG
     cout << "; distance = " << min_distance2node.at(min_dst_id) << "m" << endl;
+#endif
     return min_distance2node.at(min_dst_id);
 }
 
